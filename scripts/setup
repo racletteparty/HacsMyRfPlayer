@@ -1,0 +1,26 @@
+#!/usr/bin/env bash
+# Setups the repository.
+
+# Stop on errors
+set -e
+
+cd $(dirname "${0}")/..
+
+mkdir -p config
+
+pip install uv
+
+export PYTHONPATH="${PYTHONPATH}:${PWD}/custom_components"
+
+uv sync --frozen
+uv run pre-commit install
+
+if ! grep -R "logger" config/configuration.yaml >> /dev/null;
+then
+echo "
+logger:
+  default: info
+  logs:
+    homeassistant.components.cloud: debug
+" >> config/configuration.yaml
+fi

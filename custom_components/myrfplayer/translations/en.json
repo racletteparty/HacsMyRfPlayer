@@ -1,0 +1,69 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "GCE RfPlayer",
+        "description": "Select RfPlayer device",
+        "data": {
+          "device": "USB devices found",
+          "device_simulator": "Use RfPlayer simulator"
+        }
+      }
+    },
+    "error": {},
+    "abort": {
+      "single_instance_allowed": "[%key:common::config_flow::abort::single_instance_allowed%]",
+      "unknown": "[%key:common::config_flow::error::unknown%]"
+    }
+  },
+  "options": {
+    "step": {
+      "gateway_options": {
+        "title": "RFPlayer Options",
+        "data": {
+          "automatic_add": "Add device automatically when signal received",
+          "reconnect_interval": "Reconnect interval",
+          "receiver_protocols": "List of enabled receiver protocols",
+          "add_device": "Configure RF device manually",
+          "device": "Update already configured RF device"
+        }
+      },
+      "add_rf_device": {
+        "title": "Configure RF device manually",
+        "data": {
+          "protocol": "Device protocol",
+          "address": "Device address",
+          "profile_name": "Device profile"
+        }
+      },
+      "rf_device_options": {
+        "title": "RF Device Options",
+        "data": {
+          "redirect_address": "Redirect address"
+        }
+      }
+    }
+  },
+  "services": {
+    "send_raw_command": {
+      "name": "Send command",
+      "description": "Send a command to RF device.",
+      "fields": {
+        "command": {
+          "name": "Command",
+          "description": "command using RFPlayer format."
+        }
+      }
+    },
+    "simulate_event": {
+      "name": "Simulate event",
+      "description": "Simulate RF device event.",
+      "fields": {
+        "event_data": {
+          "name": "Event",
+          "description": "JSON event"
+        }
+      }
+    }
+  }
+}
