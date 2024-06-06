@@ -1,0 +1,19 @@
+send_raw_command:
+  description: Send a raw command to a RF device via the RfPlayer gateway.
+  fields:
+    command:
+      name: Command
+      description: The command to be sent.
+      required: true
+      example: "ON A3 RTS QUALIFIER 1"
+      selector:
+        text:
+simulate_event:
+  description: Simulate a RF device JSON event.
+  fields:
+    event_data:
+      name: Event data
+      description: The device event in JSON format without the ZIA header.
+      required: true
+      selector:
+        text:

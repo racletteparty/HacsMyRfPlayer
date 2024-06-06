@@ -1,0 +1,21 @@
+# artifacts
+__pycache__
+.pytest*
+*.egg-info
+*/build/*
+*/dist/*
+reports
+.ruff_cache
+.mypy_cache
+
+
+# misc
+.coverage
+coverage.xml
+
+
+# Home Assistant configuration
+config/*
+!config/configuration.yaml
+.venv
+venv

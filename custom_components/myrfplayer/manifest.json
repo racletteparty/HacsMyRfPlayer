@@ -1,0 +1,17 @@
+{
+  "domain": "myrfplayer",
+  "name": "MyRfPlayer",
+  "codeowners": ["@racletteparty"],
+  "config_flow": true,
+  "documentation": "https://github.com/racletteparty/HacsMyRfPlayer",
+  "integration_type": "hub",
+  "iot_class": "local_push",
+  "issue_tracker": "https://github.com/racletteparty/HacsMyRfPlayer/issues",
+  "loggers": ["myrfplayer"],
+  "requirements": [
+    "pyserial==3.5",
+    "pyserial-asyncio==0.6",
+    "jsonpath-ng==1.6.1"
+  ],
+  "version": "0.0.0"
+}

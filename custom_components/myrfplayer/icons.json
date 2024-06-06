@@ -1,0 +1,10 @@
+{
+  "services": {
+    "send_raw_command": {
+      "service": "mdi:send"
+    },
+    "simulate_event": {
+      "service": "mdi:send"
+    }
+  }
+}

@@ -1,0 +1,46 @@
+name: "Lint"
+
+on:
+  workflow_call:
+  push:
+    branches:
+      - "main"
+  pull_request:
+    branches:
+      - "main"
+
+jobs:
+  ruff:
+    name: "Ruff"
+    runs-on: "ubuntu-latest"
+    steps:
+      - name: "Checkout the repository"
+        uses: "actions/checkout@v4"
+
+      - name: "Set up Python"
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.12"
+          cache: "pip"
+
+      - name: "Install uv"
+        run: python3 -m pip install uv
+
+      - name: "Lint & Format"
+        run: |
+          uv run ruff format --check
+          uv run ruff check
+
+      - name: "Typing"
+        run: |
+          uv run mypy custom_components tests
+
+      - name: "Tests"
+        run: |
+          mkdir -p reports
+          uv run pytest --cov-report html:reports/coverage  --html=reports/test.html --cov=custom_components.myrfplayer  tests/
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: test-reports
+          path: reports
