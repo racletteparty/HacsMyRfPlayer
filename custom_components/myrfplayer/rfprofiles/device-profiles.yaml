@@ -1,0 +1,269 @@
+- name: Jamming Detector
+  match:
+    protocol: "JAMMING"
+    info_type: "1"
+  platforms:
+    binary_sensor:
+      - name: "Jamming"
+        device_class: problem
+        config:
+          value_path: "$.frame.infos.subType"
+- name: X10 lighting
+  match:
+    protocol: "X10"
+    info_type: "1"
+  platforms:
+    light:
+      - name: "Status"
+        config_status:
+          value_path: "$.frame.infos.subType"
+        cmd_turn_on: ON X10 ID {device_id}
+        cmd_turn_off: OFF X10 ID {device_id}
+- name: On/Off Status
+  match:
+    protocol: "CHACON|KD101|BLYSS|FS20"
+    info_type: "1"
+  platforms:
+    binary_sensor:
+      - name: "Status"
+        config:
+          value_path: "$.frame.infos.subType"
+- name: Visionic Sensor/Detector
+  match:
+    info_type: "2"
+    sub_type: "0"
+  platforms:
+    binary_sensor:
+      - name: "Tamper"
+        device_class: tamper
+        config:
+          value_path: "$.frame.infos.qualifier"
+          bit_mask: 1
+      - name: "Alarm"
+        device_class: safety
+        config:
+          value_path: "$.frame.infos.qualifier"
+          bit_mask: 2
+          bit_offset: 1
+      - name: "Low Battery"
+        device_class: battery
+        config:
+          value_path: "$.frame.infos.qualifier"
+          bit_mask: 4
+          bit_offset: 2
+      - name: "Supervisor Alive"
+        device_class: running
+        config:
+          value_path: "$.frame.infos.qualifier"
+          bit_mask: 8
+          bit_offset: 3
+- name: Visionic Remote
+  match:
+    info_type: "2"
+    sub_type: "1"
+  platforms:
+    binary_sensor:
+      - name: "Button 1"
+        config:
+          value_path: "$.frame.infos.qualifier"
+          bit_mask: 8
+          bit_offset: 3
+      - name: "Button 2"
+        config:
+          value_path: "$.frame.infos.qualifier"
+          bit_mask: 16
+          bit_offset: 4
+      - name: "Button 3"
+        config:
+          value_path: "$.frame.infos.qualifier"
+          bit_mask: 34
+          bit_offset: 5
+      - name: "Button 4"
+        config:
+          value_path: "$.frame.infos.qualifier"
+          bit_mask: 64
+          bit_offset: 6
+- name: Oregon Temperature Sensor
+  match:
+    info_type: "4"
+    id_phy: "0x0|0x0000|0xEA4C"
+  platforms:
+    binary_sensor:
+      - name: "Low Battery"
+        device_class: battery
+        config:
+          value_path: "$.frame.infos.lowBatt"
+    sensor:
+      - name: "Temperature"
+        device_class: temperature
+        config:
+          value_path: "$.frame.infos.measures[?(@.type=='temperature')].value"
+          unit_path: "$.frame.infos.measures[?(@.type=='temperature')].unit"
+      - name: "Rf Level"
+        device_class: signal_strength
+        unit: "dB"
+        config:
+          value_path: "$.frame.header.rfLevel"
+- name: Oregon Temperature/Humidity Sensor
+  match:
+    info_type: "4"
+    id_phy: "0x1A2D|0xCA2C|0x0ACC|0x1A3D|0xFA28"
+  platforms:
+    binary_sensor:
+      - name: "Low Battery"
+        device_class: battery
+        config:
+          value_path: "$.frame.infos.lowBatt"
+    sensor:
+      - name: "Temperature"
+        device_class: temperature
+        config:
+          value_path: "$.frame.infos.measures[?(@.type=='temperature')].value"
+          unit_path: "$.frame.infos.measures[?(@.type=='temperature')].unit"
+      - name: "Humidity"
+        device_class: humidity
+        config:
+          value_path: "$.frame.infos.measures[?(@.type=='humidity')].value"
+          unit_path: "$.frame.infos.measures[?(@.type=='humidity')].unit"
+      - name: "Rf Level"
+        device_class: signal_strength
+        unit: "dB"
+        config:
+          value_path: "$.frame.header.rfLevel"
+- name: Oregon Pressure Sensor
+  match:
+    info_type: "5"
+  platforms:
+    binary_sensor:
+      - name: "Low Battery"
+        device_class: battery
+        config:
+          value_path: "$.frame.infos.lowBatt"
+    sensor:
+      - name: "Temperature"
+        device_class: temperature
+        config:
+          value_path: "$.frame.infos.measures[?(@.type=='temperature')].value"
+          unit_path: "$.frame.infos.measures[?(@.type=='temperature')].unit"
+      - name: "Humidity"
+        device_class: humidity
+        config:
+          value_path: "$.frame.infos.measures[?(@.type=='humidity')].value"
+          unit_path: "$.frame.infos.measures[?(@.type=='humidity')].unit"
+      - name: "Pressure"
+        device_class: pressure
+        config:
+          value_path: "$.frame.infos.measures[?(@.type=='pressure')].value"
+          unit_path: "$.frame.infos.measures[?(@.type=='pressure')].unit"
+      - name: "Rf Level"
+        device_class: signal_strength
+        unit: "dB"
+        config:
+          value_path: "$.frame.header.rfLevel"
+- name: Oregon Wind Sensor
+  match:
+    info_type: "6"
+  platforms:
+    binary_sensor:
+      - name: "Low Battery"
+        device_class: battery
+        config:
+          value_path: "$.frame.infos.lowBatt"
+    sensor:
+      - name: "Wind Speed"
+        device_class: wind_speed
+        config:
+          value_path: "$.frame.infos.measures[?(@.type=='wind speed')].value"
+          unit_path: "$.frame.infos.measures[?(@.type=='wind speed')].unit"
+      - name: "Direction"
+        config:
+          value_path: "$.frame.infos.measures[?(@.type=='direction')].value"
+          unit_path: "$.frame.infos.measures[?(@.type=='direction')].unit"
+      - name: "Rf Level"
+        device_class: signal_strength
+        unit: "dB"
+        config:
+          value_path: "$.frame.header.rfLevel"
+- name: Oregon UV Sensor
+  match:
+    info_type: "7"
+  platforms:
+    binary_sensor:
+      - name: "Low Battery"
+        device_class: battery
+        config:
+          value_path: "$.frame.infos.lowBatt"
+    sensor:
+      - name: "UV"
+        config:
+          value_path: "$.frame.infos.measures[?(@.type=='uv')].value"
+      - name: "Rf Level"
+        device_class: signal_strength
+        unit: "dB"
+        config:
+          value_path: "$.frame.header.rfLevel"
+- name: OWL Power Meter
+  match:
+    info_type: "8"
+  platforms:
+    binary_sensor:
+      - name: "Low Battery"
+        device_class: battery
+        config:
+          value_path: "$.frame.infos.lowBatt"
+    sensor:
+      - name: "Energy"
+        device_class: energy
+        config:
+          value_path: "$.frame.infos.measures[?(@.type=='energy')].value"
+          unit_path: "$.frame.infos.measures[?(@.type=='energy')].unit"
+      - name: "Power"
+        device_class: power
+        config:
+          value_path: "$.frame.infos.measures[?(@.type=='power')].value"
+          unit_path: "$.frame.infos.measures[?(@.type=='power')].unit"
+      - name: "Power Phase1"
+        device_class: power
+        config:
+          value_path: "$.frame.infos.measures[?(@.type=='P1')].value"
+          unit_path: "$.frame.infos.measures[?(@.type=='P1')].unit"
+      - name: "Power Phase2"
+        device_class: power
+        config:
+          value_path: "$.frame.infos.measures[?(@.type=='P2')].value"
+          unit_path: "$.frame.infos.measures[?(@.type=='P2')].unit"
+      - name: "Power Phase3"
+        device_class: power
+        config:
+          value_path: "$.frame.infos.measures[?(@.type=='P3')].value"
+          unit_path: "$.frame.infos.measures[?(@.type=='P3')].unit"
+      - name: "Rf Level"
+        device_class: signal_strength
+        unit: "dB"
+        config:
+          value_path: "$.frame.header.rfLevel"
+- name: Oregon Rain Sensor
+  match:
+    info_type: "9"
+  platforms:
+    binary_sensor:
+      - name: "Low Battery"
+        device_class: battery
+        config:
+          value_path: "$.frame.infos.lowBatt"
+    sensor:
+      - name: "Total Rain"
+        device_class: precipitation
+        config:
+          value_path: "$.frame.infos.measures[?(@.type=='total rain')].value"
+          unit_path: "$.frame.infos.measures[?(@.type=='total rain')].unit"
+      - name: "Current Rain"
+        device_class: precipitation_intensity
+        config:
+          value_path: "$.frame.infos.measures[?(@.type=='current rain')].value"
+          unit_path: "$.frame.infos.measures[?(@.type=='current rain')].unit"
+      - name: "Rf Level"
+        device_class: signal_strength
+        unit: "dB"
+        config:
+          value_path: "$.frame.header.rfLevel"
