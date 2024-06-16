@@ -8,7 +8,7 @@ import pytest
 from pytest_homeassistant_custom_component.common import MockConfigEntry
 from pytest_mock import MockerFixture
 
-from custom_components.rfplayer.rfplayerlib import RfPlayerClient, RfplayerProtocol
+from custom_components.myrfplayer.rfplayerlib import RfPlayerClient, RfplayerProtocol
 
 
 @pytest.fixture

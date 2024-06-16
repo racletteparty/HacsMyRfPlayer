@@ -5,7 +5,7 @@ from unittest.mock import Mock
 import pytest
 from pytest_mock import MockerFixture
 
-from custom_components.rfplayer.rfplayerlib import (
+from custom_components.myrfplayer.rfplayerlib import (
     RfPlayerClient,
     RfPlayerException,
     RfplayerProtocol,
@@ -36,7 +36,7 @@ async def test_connect(mocker: MockerFixture):
     )
     await client.connect()
 
-    assert client.protocol == protocol
+    assert client._protocol == protocol
     create_serial_connection.assert_called_once()
 
 
@@ -48,12 +48,12 @@ def test_send_command_connected(mocker: MockerFixture):
         disconnect_callback=Mock(),
         loop=Mock(),
     )
-    client.protocol = Mock()
+    client._protocol = Mock()
 
     body = "FORMAT JSON"
     client.send_raw_command(body)
 
-    client.protocol.send_raw_packet.assert_called_once_with(body)
+    client._protocol.send_raw_packet.assert_called_once_with(body)
 
 
 def test_send_command_disconnected(mocker: MockerFixture):

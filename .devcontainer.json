@@ -27,8 +27,8 @@
         // Please keep this file in sync with settings in home-assistant/.vscode/settings.default.json
         "settings": {
           "python.experiments.optOutFrom": ["pythonTestAdapter"],
-          "python.defaultInterpreterPath": "/workspaces/HacsRfPlayerReloaded/venv/bin/python",
-          "python.pythonPath": "/workspaces/HacsRfPlayerReloaded/venv/bin/python",
+          "python.defaultInterpreterPath": "/workspaces/HacsMyRfPlayer/venv/bin/python",
+          "python.pythonPath": "/workspaces/HacsMyRfPlayer/venv/bin/python",
           "python.terminal.activateEnvInCurrentTerminal": true,
           "python.testing.pytestArgs": ["--no-cov"],
           "editor.formatOnPaste": false,

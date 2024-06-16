@@ -13,7 +13,7 @@ import serial
 import serial.tools.list_ports
 import voluptuous as vol
 
-from custom_components.rfplayer.rfplayerlib import RfPlayerEvent
+from custom_components.myrfplayer.rfplayerlib import RfPlayerRawEvent
 from homeassistant.config_entries import (
     ConfigEntry,
     ConfigFlow,
@@ -49,7 +49,8 @@ from .const import CONF_AUTOMATIC_ADD, CONF_PROTOCOLS, CONF_REPLACE_DEVICE
 CONF_EVENT_CODE = "event_code"
 CONF_MANUAL_PATH = "Enter Manually"
 
-RECV_MODES = sorted(itertools.chain(*rfxtrxmod.lowlevel.Status.RECMODES))
+RECEIVER_MODES = sorted(itertools.chain(*rfxtrxmod.lowlevel.Status.RECMODES))
+REPEATER_MODES = sorted(itertools.chain(*rfxtrxmod.lowlevel.Status.RECMODES))
 
 
 class DeviceData(TypedDict):
@@ -79,7 +80,7 @@ class RfxtrxOptionsFlow(OptionsFlow):
         self._selected_device: dict[str, Any] = {}
         self._selected_device_entry_id: str | None = None
         self._selected_device_event_code: str | None = None
-        self._selected_device_object: RfPlayerEvent | None = None
+        self._selected_device_object: RfPlayerRawEvent | None = None
 
     async def async_step_init(
         self, user_input: dict[str, Any] | None = None
@@ -152,7 +153,7 @@ class RfxtrxOptionsFlow(OptionsFlow):
             vol.Optional(
                 CONF_PROTOCOLS,
                 default=self._config_entry.data.get(CONF_PROTOCOLS) or [],
-            ): cv.multi_select(RECV_MODES),
+            ): cv.multi_select(RECEIVER_MODES),
             vol.Optional(CONF_EVENT_CODE): str,
             vol.Optional(CONF_DEVICE): vol.In(configure_devices),
         }
@@ -461,39 +462,10 @@ class RfxtrxConfigFlow(ConfigFlow, domain=DOMAIN):
         schema = vol.Schema({vol.Required(CONF_TYPE): vol.In(list_of_types)})
         return self.async_show_form(step_id="user", data_schema=schema, errors=errors)
 
-    async def async_step_setup_network(
-        self, user_input: dict[str, Any] | None = None
-    ) -> ConfigFlowResult:
-        """Step when setting up network configuration."""
-        errors: dict[str, str] = {}
-
-        if user_input is not None:
-            host = user_input[CONF_HOST]
-            port = user_input[CONF_PORT]
-
-            try:
-                data = await self.async_validate_rfx(host=host, port=port)
-            except CannotConnect:
-                errors["base"] = "cannot_connect"
-
-            if not errors:
-                return self.async_create_entry(title="RFXTRX", data=data)
-
-        schema = vol.Schema(
-            {vol.Required(CONF_HOST): str, vol.Required(CONF_PORT): int}
-        )
-        return self.async_show_form(
-            step_id="setup_network",
-            data_schema=schema,
-            errors=errors,
-        )
-
     async def async_step_setup_serial(
         self, user_input: dict[str, Any] | None = None
     ) -> ConfigFlowResult:
         """Step when setting up serial configuration."""
-        errors: dict[str, str] = {}
-
         if user_input is not None:
             user_selection = user_input[CONF_DEVICE]
             if user_selection == CONF_MANUAL_PATH:
@@ -503,13 +475,7 @@ class RfxtrxConfigFlow(ConfigFlow, domain=DOMAIN):
                 get_serial_by_id, user_selection
             )
 
-            try:
-                data = await self.async_validate_rfx(device=dev_path)
-            except CannotConnect:
-                errors["base"] = "cannot_connect"
-
-            if not errors:
-                return self.async_create_entry(title="RFXTRX", data=data)
+            return self.async_create_entry(title="RfPlayer", data=data)
 
         ports = await self.hass.async_add_executor_job(serial.tools.list_ports.comports)
         list_of_ports = {}
@@ -524,7 +490,6 @@ class RfxtrxConfigFlow(ConfigFlow, domain=DOMAIN):
         return self.async_show_form(
             step_id="setup_serial",
             data_schema=schema,
-            errors=errors,
         )
 
     async def async_step_setup_serial_manual_path(
@@ -571,10 +536,6 @@ class RfxtrxConfigFlow(ConfigFlow, domain=DOMAIN):
     def async_get_options_flow(config_entry: ConfigEntry) -> OptionsFlow:
         """Get the options flow for this handler."""
         return RfxtrxOptionsFlow(config_entry)
-
-    async def _test_transport(self, device: str | None) -> bool:
-        """Construct a rfx object based on config."""
-        RfPlayerClient()
 
 
 def get_serial_by_id(dev_path: str) -> str:
