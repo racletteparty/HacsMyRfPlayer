@@ -1,9 +1,10 @@
 """Async RfPlayer low-level protocol."""
 
 import asyncio
+from collections.abc import Callable
 import json
 import logging
-from typing import Callable, Optional, Union, cast
+from typing import Optional, Union, cast
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -89,7 +90,7 @@ class RfplayerProtocol(asyncio.Protocol):
         if header == "ZIA--":
             self.event_callback(cast(SimplePacketType, body))
         elif header == "ZIA33":
-            self.event_callback(cast(JsonPacketType(json.loads(body))))
+            self.event_callback(cast(JsonPacketType, json.loads(body)))
         elif header in ["ZIA00", "ZIA11", "ZIA22", "ZIA44", "ZIA66"]:
             _LOGGER.warning("unsupported packet format: %s", header)
             _LOGGER.debug("packet body: %s", body)

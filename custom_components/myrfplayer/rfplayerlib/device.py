@@ -4,8 +4,7 @@ from collections.abc import Callable
 from dataclasses import dataclass
 import json
 import logging
-
-from jsonpath_ng import parse
+from typing import Any
 
 from .protocol import JsonPacketType, RfPlayerRawEvent, SimplePacketType
 
@@ -22,28 +21,52 @@ class RfDeviceId:
 
     protocol: str
     address: str
-    device_type: str
+    model: str | None
 
     @property
     def device_id(self) -> str:
         """Build a unique device id for the device."""
 
-        return f"{self.protocol}_{self.address}".lower()
+        return f"{self.protocol}-{self.address}".lower()
 
 
-
+@dataclass
 class RfDeviceEvent:
     """Device-oriented event after processing a raw RfPlayer event."""
 
     device: RfDeviceId
     data: RfPlayerRawEvent
 
+    @property
+    def device_id(self):
+        """Get device id."""
+
+        return self.device.device_id
+
+    @property
+    def info_type(self) -> int:
+        """Get info type."""
+
+        if isinstance(self.data, JsonPacketType):
+            return int(self.data["infoType"])
+
+        return -1
+
+    @property
+    def infos(self) -> dict[str, Any]:
+        """Get infos for the associated info type."""
+
+        if isinstance(self.data, JsonPacketType):
+            return self.data["infos"]
+
+        return {"response": self.data}
 
 
 @dataclass
 class RfDeviceEventAdapter:
     """Extract RF device information from a raw RfPlayer event."""
 
+    id: str
     device_event_callback: Callable[[RfDeviceEvent], None]
 
     def raw_event_callback(self, raw_packet: RfPlayerRawEvent):
@@ -62,30 +85,38 @@ class RfDeviceEventAdapter:
         device = RfDeviceId(
             protocol=GATEWAY_PROTOCOL,
             address=self.id,
-            device_type=GATEWAY_DEVICE,
+            model=GATEWAY_DEVICE,
         )
         return RfDeviceEvent(device=device, data=SimplePacketType(raw_packet))
 
-    def _json_packet_to_device_event(self, raw_packet: JsonPacketType) -> RfDeviceEvent:
-        json_packet = json.loads(raw_packet)
+    def _json_packet_to_device_event(self, json_packet: JsonPacketType) -> RfDeviceEvent:
         device = self._parse_json_device(json_packet)
-        return RfDeviceEvent(device=device, data=JsonPacketType(json_packet))
+        return RfDeviceEvent(device=device, data=json_packet)
 
-    def _parse_json_device(self, json_packet: dict) -> RfDeviceId:
-        header = json_packet["frame"]["header"]
-        infos = json_packet["frame"]["infos"]
-        device_id = UNKNOWN_INFO
-        for key in ["id", "id_channel", "adr_channel"]:
-            if key in infos:
-                device_id = infos[key]
-        device_type = UNKNOWN_INFO
+    def _convert_raw_model(self, raw_model: str) -> str:
+        if raw_model.lower() in ["on", "off"]:
+            return "switch"
+
+        return raw_model
+
+    def _get_model(self, infos: dict[str, Any]) -> str:
         for key in ["id_PHYMeaning", "subTypeMeaning"]:
             if key in infos:
-                device_type = infos[key]
+                return self._convert_raw_model(infos[key])
+        return UNKNOWN_INFO
+
+    def _get_address(self, infos: dict[str, Any]) -> str:
+        for key in ["id", "id_channel", "adr_channel"]:
+            if key in infos:
+                return infos[key]
+        return UNKNOWN_INFO
+
+    def _parse_json_device(self, json_packet: dict[str, Any]) -> RfDeviceId:
+        header = json_packet["frame"]["header"]
+        infos = json_packet["frame"]["infos"]
         protocol = header["protocolMeaning"]
-        # info_type = header["infoType"]
         return RfDeviceId(
             protocol=protocol,
-            address=device_id,
-            device_type=device_type,
+            address=self._get_address(infos),
+            model=self._get_model(infos),
         )

@@ -2,7 +2,9 @@
 
 from __future__ import annotations
 
+import asyncio
 from unittest.mock import Mock
+from uuid import uuid4
 
 import pytest
 from pytest_homeassistant_custom_component.common import MockConfigEntry
@@ -11,15 +13,22 @@ from pytest_mock import MockerFixture
 from custom_components.myrfplayer.rfplayerlib import RfPlayerClient, RfplayerProtocol
 
 
+@pytest.fixture(autouse=True)
+def auto_enable_custom_integrations(enable_custom_integrations):  # pylint: disable=unused-argument
+    """Automatically enable loading custom integrations in all tests."""
+    return
+
+
 @pytest.fixture
-def new_protocol() -> RfplayerProtocol:
+def test_protocol() -> RfplayerProtocol:
     """Create a rfclient protocol with patched event loop."""
 
-    transport = Mock()
-    event_callback = Mock()
-    disconnect_callback = Mock()
+    transport = Mock(spec=asyncio.WriteTransport)
+    event_callback = Mock(spec=callable)
+    disconnect_callback = Mock(spec=callable)
     loop = Mock()
     protocol = RfplayerProtocol(
+        id=uuid4(),
         event_callback=event_callback,
         disconnect_callback=disconnect_callback,
         loop=loop,
@@ -30,29 +39,30 @@ def new_protocol() -> RfplayerProtocol:
 
 
 @pytest.fixture
-def new_client(mocker: MockerFixture):
+def serial_connection_mock(
+    mocker: MockerFixture, test_protocol: RfplayerProtocol
+) -> Mock:
+    """Patch create_serial_connection to return mock protocol."""
+
+    return mocker.patch(
+        "custom_components.myrfplayer.rfplayerlib.create_serial_connection",
+        return_value=(None, test_protocol),
+    )
+
+
+@pytest.fixture
+def test_client(
+    serial_connection_mock: Mock, test_protocol: RfplayerProtocol
+) -> RfPlayerClient:
     """Create a rfclient with patch serial connection."""
 
-    event_callback = Mock()
-    disconnect_callback = Mock()
-    loop = Mock()
-    port: str = "/dev/ttyUSB0"
-    baud: int = 115200
-    protocol: RfplayerProtocol = Mock()
-
-    create_serial_connection = mocker.patch(
-        "custom_components.rfplayer.rfplayerlib.client.create_serial_connection",
-        return_value=(None, protocol),
-    )
-    return (
-        create_serial_connection,
-        RfPlayerClient(
-            event_callback=event_callback,
-            disconnect_callback=disconnect_callback,
-            loop=loop,
-            port=port,
-            baud=baud,
-        ),
+    return RfPlayerClient(
+        event_callback=test_protocol.event_callback,
+        disconnect_callback=test_protocol.disconnect_callback,
+        loop=Mock(spec=asyncio.AbstractEventLoop),
+        port="/dev/ttyUSB0",
+        baud=115200,
+        receiver_protocols=["X2D", "RTS"],
     )
 
 
@@ -61,18 +71,14 @@ def create_rfplayer_test_cfg(
     automatic_add=False,
     protocols=None,
     devices=None,
-    host=None,
-    port=None,
 ):
     """Create rfplayer config entry data."""
     return {
         "device": device,
-        "host": host,
-        "port": port,
         "automatic_add": automatic_add,
-        "protocols": protocols,
-        "debug": False,
+        "receiver_protocols": protocols,
         "devices": devices or {},
+        "reconnect_interval": 10,
     }
 
 
@@ -82,8 +88,6 @@ async def setup_rfplayer_test_cfg(
     automatic_add=False,
     devices: dict[str, dict] | None = None,
     protocols=None,
-    host=None,
-    port=None,
 ):
     """Construct a rfplayer config entry."""
     entry_data = create_rfplayer_test_cfg(
@@ -91,8 +95,6 @@ async def setup_rfplayer_test_cfg(
         automatic_add=automatic_add,
         devices=devices,
         protocols=protocols,
-        host=host,
-        port=port,
     )
     mock_entry = MockConfigEntry(
         domain="myrfplayer", unique_id="a_player", data=entry_data
