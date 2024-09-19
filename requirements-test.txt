@@ -7,4 +7,4 @@ pytest-mock~=3.14.0
 colorlog~=6.8.2
 ruff~=0.4.7
 mypy~=1.10
-types-PyYAML==6.0.12
+types-PyYAML==6.0.12.20240917
