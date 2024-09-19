@@ -1,5 +1,5 @@
 homeassistant==2024.9.0
-pydantic==1.10.17
+pydantic==2.9.2
 pyserial==3.5
 pyserial-asyncio==0.6
 jsonpath-ng==1.6.1
