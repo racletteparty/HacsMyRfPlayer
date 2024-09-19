@@ -38,41 +38,6 @@ async def start_options_flow(hass, entry):
     return await hass.config_entries.options.async_init(entry.entry_id)
 
 
-async def test_setup_network(transport_mock, hass: HomeAssistant) -> None:
-    """Test we can setup network."""
-    result = await hass.config_entries.flow.async_init(
-        DOMAIN, context={"source": config_entries.SOURCE_USER}
-    )
-
-    assert result["type"] is FlowResultType.FORM
-    assert result["step_id"] == "user"
-    assert result["errors"] == {}
-
-    result = await hass.config_entries.flow.async_configure(
-        result["flow_id"],
-        {"type": "Network"},
-    )
-
-    assert result["type"] is FlowResultType.FORM
-    assert result["step_id"] == "setup_network"
-    assert result["errors"] == {}
-
-    with patch("homeassistant.components.rfxtrx.async_setup_entry", return_value=True):
-        result = await hass.config_entries.flow.async_configure(
-            result["flow_id"], {"host": "10.10.0.1", "port": 1234}
-        )
-
-    assert result["type"] is FlowResultType.CREATE_ENTRY
-    assert result["title"] == "RFXTRX"
-    assert result["data"] == {
-        "host": "10.10.0.1",
-        "port": 1234,
-        "device": None,
-        "automatic_add": False,
-        "devices": {},
-    }
-
-
 @patch("serial.tools.list_ports.comports", return_value=[com_port()])
 async def test_setup_serial(com_mock, transport_mock, hass: HomeAssistant) -> None:
     """Test we can setup serial."""
@@ -155,35 +120,6 @@ async def test_setup_serial_manual(
         "automatic_add": False,
         "devices": {},
     }
-
-
-async def test_setup_network_fail(transport_mock, hass: HomeAssistant) -> None:
-    """Test we can setup network."""
-    transport_mock.return_value.connect.side_effect = RfPlayerException
-    result = await hass.config_entries.flow.async_init(
-        DOMAIN, context={"source": config_entries.SOURCE_USER}
-    )
-
-    assert result["type"] is FlowResultType.FORM
-    assert result["step_id"] == "user"
-    assert result["errors"] == {}
-
-    result = await hass.config_entries.flow.async_configure(
-        result["flow_id"],
-        {"type": "Network"},
-    )
-
-    assert result["type"] is FlowResultType.FORM
-    assert result["step_id"] == "setup_network"
-    assert result["errors"] == {}
-
-    result = await hass.config_entries.flow.async_configure(
-        result["flow_id"], {"host": "10.10.0.1", "port": 1234}
-    )
-
-    assert result["type"] is FlowResultType.FORM
-    assert result["step_id"] == "setup_network"
-    assert result["errors"] == {"base": "cannot_connect"}
 
 
 @patch("serial.tools.list_ports.comports", return_value=[com_port()])

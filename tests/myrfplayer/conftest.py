@@ -28,7 +28,7 @@ def test_protocol() -> RfplayerProtocol:
     disconnect_callback = Mock(spec=callable)
     loop = Mock()
     protocol = RfplayerProtocol(
-        id=uuid4(),
+        id=str(uuid4()),
         event_callback=event_callback,
         disconnect_callback=disconnect_callback,
         loop=loop,

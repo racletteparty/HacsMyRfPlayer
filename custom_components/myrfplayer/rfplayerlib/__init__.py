@@ -52,7 +52,9 @@ class RfPlayerClient:
     async def connect(self):
         """Open connection with RfPlayer gateway."""
 
-        adapter = RfDeviceEventAdapter(self.event_callback)
+        adapter = RfDeviceEventAdapter(
+            id=self.port, device_event_callback=self.event_callback
+        )
 
         protocol_factory = partial(
             RfplayerProtocol,

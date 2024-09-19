@@ -17,13 +17,24 @@ class JsonPacketType(dict):
     """RfPlayer JSON packet type."""
 
 
+class JsonInfo(dict):
+    """RfPlayer JSON event infos."""
+
+
 class SimplePacketType(str):
     """RfPlayer simple string packet type."""
 
     __slots__ = ()
 
 
+class SimpleInfo(str):
+    """RfPlayer simple response."""
+
+    __slots__ = ()
+
+
 RfPlayerRawEvent = Union[JsonPacketType | SimplePacketType]
+RfPlayerEventInfo = Union[JsonInfo | SimpleInfo]
 
 
 def _valid_packet(line: str):

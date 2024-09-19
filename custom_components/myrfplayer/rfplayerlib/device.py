@@ -2,11 +2,17 @@
 
 from collections.abc import Callable
 from dataclasses import dataclass
-import json
 import logging
 from typing import Any
 
-from .protocol import JsonPacketType, RfPlayerRawEvent, SimplePacketType
+from .protocol import (
+    JsonInfo,
+    JsonPacketType,
+    RfPlayerEventInfo,
+    RfPlayerRawEvent,
+    SimpleInfo,
+    SimplePacketType,
+)
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -21,13 +27,16 @@ class RfDeviceId:
 
     protocol: str
     address: str
+    group_id: str | None
     model: str | None
 
     @property
     def device_id(self) -> str:
         """Build a unique device id for the device."""
 
-        return f"{self.protocol}-{self.address}".lower()
+        if self.group_id is not None:
+            return f"{self.protocol}-{self.group_id}:{self.address}"
+        return f"{self.protocol}-{self.address}"
 
 
 @dataclass
@@ -53,13 +62,13 @@ class RfDeviceEvent:
         return -1
 
     @property
-    def infos(self) -> dict[str, Any]:
+    def infos(self) -> RfPlayerEventInfo:
         """Get infos for the associated info type."""
 
         if isinstance(self.data, JsonPacketType):
-            return self.data["infos"]
+            return JsonInfo(self.data["infos"])
 
-        return {"response": self.data}
+        return SimpleInfo(self.data)
 
 
 @dataclass
@@ -85,11 +94,14 @@ class RfDeviceEventAdapter:
         device = RfDeviceId(
             protocol=GATEWAY_PROTOCOL,
             address=self.id,
+            group_id=None,
             model=GATEWAY_DEVICE,
         )
         return RfDeviceEvent(device=device, data=SimplePacketType(raw_packet))
 
-    def _json_packet_to_device_event(self, json_packet: JsonPacketType) -> RfDeviceEvent:
+    def _json_packet_to_device_event(
+        self, json_packet: JsonPacketType
+    ) -> RfDeviceEvent:
         device = self._parse_json_device(json_packet)
         return RfDeviceEvent(device=device, data=json_packet)
 
@@ -118,5 +130,6 @@ class RfDeviceEventAdapter:
         return RfDeviceId(
             protocol=protocol,
             address=self._get_address(infos),
+            group_id=None,
             model=self._get_model(infos),
         )

@@ -11,12 +11,15 @@ from serial import SerialException
 
 from custom_components.myrfplayer.const import (
     DOMAIN,
-    EVENT_RFPLAYER_EVENT,
     RFPLAYER_CLIENT,
+    SIGNAL_RFPLAYER_EVENT,
 )
 from custom_components.myrfplayer.rfplayerlib import RfPlayerClient
 from custom_components.myrfplayer.rfplayerlib.device import RfDeviceEvent, RfDeviceId
-from custom_components.myrfplayer.rfplayerlib.protocol import RfplayerProtocol
+from custom_components.myrfplayer.rfplayerlib.protocol import (
+    JsonPacketType,
+    RfplayerProtocol,
+)
 from homeassistant.config_entries import ConfigEntryState
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers import device_registry as dr
@@ -28,112 +31,120 @@ SOME_PROTOCOLS = ["X2D", "RTS"]
 
 
 async def test_fire_event(
+    serial_connection_mock: Mock,
     hass: HomeAssistant,
     device_registry: dr.DeviceRegistry,
 ) -> None:
     """Test fire event."""
     await setup_rfplayer_test_cfg(
-        hass,
-        device="/dev/serial/by-id/usb-rfplayer-port0",
-        automatic_add=True,
-        devices={
-            "oregon-39168": {},
-            "blyss-4261483730": {},
-        },
+        hass, device="/dev/serial/by-id/usb-rfplayer-port0", automatic_add=True
     )
 
     calls = []
 
     @callback
-    def record_event(event):
+    def record_event(event: RfDeviceEvent):
         """Add recorded event to set."""
-        assert event.event_type == "myrfplayer_event"
-        calls.append(event.data)
+        calls.append(event)
 
-    hass.bus.async_listen(EVENT_RFPLAYER_EVENT, record_event)
+    hass.bus.async_listen(SIGNAL_RFPLAYER_EVENT, record_event)
 
     client = cast(RfPlayerClient, hass.data[DOMAIN][RFPLAYER_CLIENT])
 
     client.event_callback(
         RfDeviceEvent(
-            device=RfDeviceId(protocol="OREGON", address="39168", model="PCR800"),
-            data={
-                "frame": {
-                    "header": {
-                        "frameType": "0",
-                        "dataFlag": "0",
-                        "rfLevel": "-71",
-                        "floorNoise": "-98",
-                        "rfQuality": "5",
-                        "protocol": "5",
-                        "protocolMeaning": "OREGON",
-                        "infoType": "9",
-                        "frequency": "433920",
-                    },
-                    "infos": {
-                        "subType": "0",
-                        "id_PHY": "0x2A19",
-                        "id_PHYMeaning": "PCR800",
-                        "adr_channel": "39168",
-                        "adr": "153",
-                        "channel": "0",
-                        "qualifier": "48",
-                        "lowBatt": "0",
-                        "measures": [
-                            {"type": "total rain", "value": "1040.1", "unit": "mm"},
-                            {"type": "current rain", "value": "0.00", "unit": "mm/h"},
-                        ],
-                    },
+            device=RfDeviceId(
+                protocol="OREGON", address="39168", model="PCR800", group_id=None
+            ),
+            data=JsonPacketType(
+                {
+                    "frame": {
+                        "header": {
+                            "frameType": "0",
+                            "dataFlag": "0",
+                            "rfLevel": "-71",
+                            "floorNoise": "-98",
+                            "rfQuality": "5",
+                            "protocol": "5",
+                            "protocolMeaning": "OREGON",
+                            "infoType": "9",
+                            "frequency": "433920",
+                        },
+                        "infos": {
+                            "subType": "0",
+                            "id_PHY": "0x2A19",
+                            "id_PHYMeaning": "PCR800",
+                            "adr_channel": "39168",
+                            "adr": "153",
+                            "channel": "0",
+                            "qualifier": "48",
+                            "lowBatt": "0",
+                            "measures": [
+                                {"type": "total rain", "value": "1040.1", "unit": "mm"},
+                                {
+                                    "type": "current rain",
+                                    "value": "0.00",
+                                    "unit": "mm/h",
+                                },
+                            ],
+                        },
+                    }
                 }
-            },
+            ),
         )
     )
 
     client.event_callback(
         RfDeviceEvent(
-            device=RfDeviceId(protocol="BLYSS", address="4261483730", model=""),
-            data={
-                "frame": {
-                    "header": {
-                        "frameType": "0",
-                        "dataFlag": "0",
-                        "rfLevel": "-41",
-                        "floorNoise": "-97",
-                        "rfQuality": "10",
-                        "protocol": "3",
-                        "protocolMeaning": "BLYSS",
-                        "infoType": "1",
-                        "frequency": "433920",
-                    },
-                    "infos": {
-                        "subType": "0",
-                        "id": "4261483730",
-                        "subTypeMeaning": "OFF",
-                    },
+            device=RfDeviceId(
+                protocol="BLYSS", address="4261483730", model=None, group_id=None
+            ),
+            data=JsonPacketType(
+                {
+                    "frame": {
+                        "header": {
+                            "frameType": "0",
+                            "dataFlag": "0",
+                            "rfLevel": "-41",
+                            "floorNoise": "-97",
+                            "rfQuality": "10",
+                            "protocol": "3",
+                            "protocolMeaning": "BLYSS",
+                            "infoType": "1",
+                            "frequency": "433920",
+                        },
+                        "infos": {
+                            "subType": "0",
+                            "id": "4261483730",
+                            "subTypeMeaning": "OFF",
+                        },
+                    }
                 }
-            },
+            ),
         )
     )
 
     client.event_callback(
         RfDeviceEvent(
-            device=RfDeviceId(protocol="gateway", address="a_player", model="gateway"),
+            device=RfDeviceId(
+                protocol="GATEWAY", address="a_player", model="gateway", group_id=None
+            ),
             data="Welcome to Ziblue Dongle RFPLAYER (RFP1000, Firmware V1.12Mac 0xF6C09FA1)!",
         )
     )
 
     device_id_1 = device_registry.async_get_device(
-        identifiers={("myrfplayer", "oregon-39168")}
+        identifiers={("myrfplayer", "OREGON-39168")}
     )
     assert device_id_1
 
     device_id_2 = device_registry.async_get_device(
-        identifiers={("myrfplayer", "blyss-4261483730")}
+        identifiers={("myrfplayer", "BLYSS-4261483730")}
     )
     assert device_id_2
 
     device_id_3 = device_registry.async_get_device(
-        identifiers={("myrfplayer", "gateway")}
+        identifiers={("myrfplayer", "GATEWAY.a_player")}
     )
     assert device_id_3
 

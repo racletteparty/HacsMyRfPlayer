@@ -3,11 +3,11 @@
 from __future__ import annotations
 
 import asyncio
-from collections.abc import Callable, Mapping
+from collections.abc import Callable
 import copy
 import json
 import logging
-from typing import Any, cast
+from typing import cast
 
 import slugify
 import voluptuous as vol
@@ -15,16 +15,13 @@ import voluptuous as vol
 from custom_components.myrfplayer.rfplayerlib import RfPlayerClient, RfPlayerException
 from custom_components.myrfplayer.rfplayerlib.device import RfDeviceEvent, RfDeviceId
 from custom_components.myrfplayer.rfplayerlib.protocol import RfPlayerRawEvent
-from custom_components.myrfplayer.rfprofiles import registry
 from custom_components.myrfplayer.rfprofiles.registry import (
-    DeviceProfile,
-    PlatformConfig,
-    ProfileRegistry,
+    AnyRfpPlatformConfig,
+    RfpPlatformConfig,
     get_profile_registry,
 )
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import (
-    ATTR_DEVICE_ID,
     ATTR_ENTITY_ID,
     CONF_ADDRESS,
     CONF_DEVICE,
@@ -32,7 +29,6 @@ from homeassistant.const import (
     CONF_DEVICES,
     CONF_EVENT_DATA,
     CONF_MODEL,
-    CONF_PROFILE_NAME,
     CONF_PROTOCOL,
     EVENT_HOMEASSISTANT_STOP,
     Platform,
@@ -62,19 +58,17 @@ from homeassistant.helpers.restore_state import RestoreEntity
 
 from .const import (
     ATTR_COMMAND,
-    ATTR_EVENT,
-    ATTR_INFO_TYPE,
-    ATTR_INFOS,
+    ATTR_EVENT_DATA,
     CONF_AUTOMATIC_ADD,
+    CONF_GROUP_ID,
     CONF_RECEIVER_PROTOCOLS,
     CONF_RECONNECT_INTERVAL,
     CONNECTION_TIMEOUT,
     DOMAIN,
-    EVENT_RFPLAYER_EVENT,
     RFPLAYER_CLIENT,
     SERVICE_SEND,
-    SIGNAL_AVAILABILITY,
-    SIGNAL_EVENT,
+    SIGNAL_RFPLAYER_AVAILABILITY,
+    SIGNAL_RFPLAYER_EVENT,
 )
 
 _LOGGER = logging.getLogger(__name__)
@@ -115,55 +109,29 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 async def async_setup_internal(hass: HomeAssistant, entry: ConfigEntry) -> None:
     """Set up the RfPlayer component."""
     config = entry.data
-
-    # Setup some per rf device config
-    devices = hass.data[DOMAIN][CONF_DEVICES]
-
-    # TODO create gateway device ?
-    # TODO create rf devices from RfDeviceEntity but needs at least 1 entity
+    device_ids: set[str] = set()
 
     device_registry = dr.async_get(hass)
 
-    # Declare the Handle event
+    # Declare the RfPlayer event handler
     @callback
     def async_handle_receive(event: RfDeviceEvent) -> None:
         """Handle received messages from RfPlayer gateway."""
 
-        _LOGGER.debug("Receive event: %s", event)
+        _LOGGER.debug("Receive event: %s", json.dumps(event.data))
 
-        event_data = {
-            ATTR_DEVICE_ID: event.device_id,
-            ATTR_INFO_TYPE: event.info_type,
-            ATTR_INFOS: event.infos,
-        }
-
-        if event.device_id not in devices:
+        if event.device_id not in device_ids:
             if config[CONF_AUTOMATIC_ADD]:
                 _add_rf_device(event)
             else:
                 return
 
-        device_entry = device_registry.async_get_device(
-            identifiers={(DOMAIN, event.device.device_id)},
-        )
-        if device_entry:
-            event_data[ATTR_ENTITY_ID] = device_entry.id
-
         # Callback to HA registered components.
-        async_dispatcher_send(hass, SIGNAL_EVENT, event, event.device_id)
-
-        # Signal event to any other listeners
-        hass.bus.async_fire(EVENT_RFPLAYER_EVENT, event_data)
+        async_dispatcher_send(hass, SIGNAL_RFPLAYER_EVENT, event)
 
     @callback
     def _add_rf_device(event: RfDeviceEvent) -> None:
         """Add a device to config entry."""
-
-        config = {}
-        config[CONF_DEVICE_ID] = event.device.device_id
-        config[CONF_PROTOCOL] = event.device.protocol
-        config[CONF_ADDRESS] = event.device.address
-        config[CONF_EVENT_DATA] = json.dumps(event.data)
 
         _LOGGER.info(
             "Added device %s (Proto: %s Addr: %s Model: %s)",
@@ -175,10 +143,11 @@ async def async_setup_internal(hass: HomeAssistant, entry: ConfigEntry) -> None:
 
         data = entry.data.copy()
         data[CONF_DEVICES] = copy.deepcopy(entry.data[CONF_DEVICES])
-        data[CONF_DEVICES][event.device.device_id] = config
+        data[CONF_DEVICES][event.device.device_id] = _build_device_info_from_event(
+            event
+        )
         hass.config_entries.async_update_entry(entry=entry, data=data)
-        devices[event.device.device_id] = config
-        # TODO call device_registry.async_get_or_create ?
+        device_ids.add(event.device.device_id)
 
     @callback
     def _remove_rf_device(device_id: str) -> None:
@@ -191,7 +160,7 @@ async def async_setup_internal(hass: HomeAssistant, entry: ConfigEntry) -> None:
             },
         }
         hass.config_entries.async_update_entry(entry=entry, data=data)
-        devices.pop(device_id)
+        device_ids.remove(device_id)
 
     @callback
     def _updated_rf_device(event: Event[EventDeviceRegistryUpdatedData]) -> None:
@@ -200,7 +169,7 @@ async def async_setup_internal(hass: HomeAssistant, entry: ConfigEntry) -> None:
         device_entry = device_registry.deleted_devices[event.data[ATTR_ENTITY_ID]]
         if entry.entry_id not in device_entry.config_entries:
             return
-        device_id = get_device_id_from_identifiers(device_entry.identifiers)
+        device_id = _get_device_id_from_identifiers(device_entry.identifiers)
         if device_id:
             _remove_rf_device(device_id)
 
@@ -208,7 +177,7 @@ async def async_setup_internal(hass: HomeAssistant, entry: ConfigEntry) -> None:
     def reconnect_gateway(_: Exception | None = None) -> None:
         """Schedule reconnect after connection has been unexpectedly lost."""
 
-        async_dispatcher_send(hass, SIGNAL_AVAILABILITY, False)
+        async_dispatcher_send(hass, SIGNAL_RFPLAYER_AVAILABILITY, False)
 
         # If HA is not stopping, initiate new connection
         if hass.state is not CoreState.stopping:
@@ -246,7 +215,7 @@ async def async_setup_internal(hass: HomeAssistant, entry: ConfigEntry) -> None:
                 "Error connecting to RfPlayer, reconnecting in %s", reconnect_interval
             )
             # Connection to RfPlayer gateway is lost, make entities unavailable
-            async_dispatcher_send(hass, SIGNAL_AVAILABILITY, False)
+            async_dispatcher_send(hass, SIGNAL_RFPLAYER_AVAILABILITY, False)
 
             async_call_later(hass, reconnect_interval, _reconnect_job)
 
@@ -254,7 +223,7 @@ async def async_setup_internal(hass: HomeAssistant, entry: ConfigEntry) -> None:
 
         # There is a valid connection to a RfPlayer gateway now so
         # mark entities as available
-        async_dispatcher_send(hass, SIGNAL_AVAILABILITY, True)
+        async_dispatcher_send(hass, SIGNAL_RFPLAYER_AVAILABILITY, True)
 
         _LOGGER.info("Connected to RfPlayer")
 
@@ -272,27 +241,29 @@ async def async_setup_internal(hass: HomeAssistant, entry: ConfigEntry) -> None:
         if not client.connected:
             raise PlatformNotReady("RfPlayer not connected")
 
-        event = call.data[ATTR_EVENT]
+        event = call.data[ATTR_EVENT_DATA]
         client.send_raw_command(event)
 
     hass.services.async_register(DOMAIN, SERVICE_SEND, send, schema=SERVICE_SEND_SCHEMA)
 
 
 async def async_setup_platform_entry(
+    hass: HomeAssistant,
     config_entry: ConfigEntry,
     async_add_entities: AddEntitiesCallback,
-    platform_name: str,
+    platform: Platform,
     builder: Callable[
         [
             RfDeviceId,
-            dict[str, PlatformConfig],
-            RfDeviceEvent | None,
+            list[AnyRfpPlatformConfig],
+            RfPlayerRawEvent | None,
         ],
         list[Entity],
     ],
 ) -> None:
     """Set up config entry."""
     entry_data = config_entry.data
+    # Set of device IDs already configured for the current platform
     device_ids: set[str] = set()
 
     profile_registy = get_profile_registry()
@@ -300,34 +271,43 @@ async def async_setup_platform_entry(
     # Add entities from config
     entities = []
     for device_id, device_info in entry_data[CONF_DEVICES].items():
-        protocol = device_info[CONF_PROTOCOL]
-        address = device_info[CONF_ADDRESS]
-        model = device_info.get(CONF_MODEL)
-        event_json_data = device_info.get(CONF_EVENT_DATA)
-        event_data = json.loads(event_json_data) if event_json_data else None
-        profile_name = device_info.get(CONF_PROFILE_NAME)
-        device = RfDeviceId(protocol=protocol, address=address, model=model)
-        event = RfDeviceEvent(device, event_data) if event_data else None
+        event = _build_event_from_device_info(device_info)
 
-        profile = profile_registy.get_profile(profile_name)
-
-        platform_config = profile.platforms.get(platform_name)
+        platform_config = profile_registy.get_platform_config(event.data, platform)
         if not platform_config:
-            _LOGGER.debug(
-                "Platform %s not supported by profile %s", platform_name, profile_name
+            continue
+
+        assert device_id == event.device_id
+        if device_id in device_ids:
+            _LOGGER.info(
+                "Device %s already configured for platform %s",
+                device_id,
+                platform,
             )
             continue
 
-        # De-duplicate
-        assert device_id == device.device_id
-        device_ids.add(device.device_id)
-        if device.device_id in device_ids:
-            _LOGGER.info("Device id duplicated %s", device.device_id)
-            continue
-
-        entities.extend(builder(device, platform_config, event, device_info))
+        device_ids.add(device_id)
+        entities.extend(builder(event.device, platform_config, event.data))
 
     async_add_entities(entities)
+
+    # If automatic add is on, hookup listener
+    if entry_data[CONF_AUTOMATIC_ADD]:
+
+        @callback
+        def _update(event: RfDeviceEvent) -> None:
+            if event.device_id in device_ids:
+                return
+            platform_config = profile_registy.get_platform_config(event.data, platform)
+            if not platform_config:
+                return
+
+            device_ids.add(event.device_id)
+            async_add_entities(builder(event.device, platform_config, event.data))
+
+        config_entry.async_on_unload(
+            async_dispatcher_connect(hass, SIGNAL_RFPLAYER_EVENT, _update)
+        )
 
 
 async def async_remove_config_entry_device(
@@ -340,18 +320,39 @@ async def async_remove_config_entry_device(
     return True
 
 
-def get_device_id_from_identifiers(
+def _get_device_id_from_identifiers(
     identifiers: set[tuple[str, str]],
 ) -> str:
     """Calculate the device id from a device identifier."""
-    return next((x[1] for x in identifiers if x[0] == DOMAIN), None)
+    return next((x[1] for x in identifiers if x[0] == DOMAIN), "_undefined_")
 
 
-def get_identifiers_from_device(
+def _get_identifiers_from_device(
     device: RfDeviceId,
 ) -> set[tuple[str, str]]:
     """Calculate the device identifier from a device id."""
     return {(DOMAIN, device.device_id)}
+
+
+def _build_event_from_device_info(device_info: dict) -> RfDeviceEvent:
+    protocol = device_info[CONF_PROTOCOL]
+    address = device_info[CONF_ADDRESS]
+    model = device_info.get(CONF_MODEL)
+    group_id = device_info.get(CONF_GROUP_ID)
+    event_json_data = device_info.get(CONF_EVENT_DATA)
+    event_data = json.loads(event_json_data) if event_json_data else None
+    device = RfDeviceId(
+        protocol=protocol, address=address, group_id=group_id, model=model
+    )
+    return RfDeviceEvent(device, data=event_data)
+
+
+def _build_device_info_from_event(event: RfDeviceEvent) -> dict[str, str]:
+    device_info: dict[str, str] = {}
+    device_info[CONF_PROTOCOL] = event.device.protocol
+    device_info[CONF_ADDRESS] = event.device.address
+    device_info[CONF_EVENT_DATA] = json.dumps(event.data)
+    return device_info
 
 
 class RfDeviceEntity(RestoreEntity):
@@ -363,8 +364,8 @@ class RfDeviceEntity(RestoreEntity):
     _attr_assumed_state = True
     _attr_has_entity_name = True
     _attr_should_poll = False
-    _device: RfDeviceId
-    _event: RfDeviceEvent | None
+    _device_id: str
+    _event_data: RfPlayerRawEvent | None
 
     def __init__(
         self,
@@ -373,52 +374,56 @@ class RfDeviceEntity(RestoreEntity):
     ) -> None:
         """Initialize the device."""
         self._attr_device_info = DeviceInfo(
-            identifiers=get_identifiers_from_device(device),
+            identifiers=_get_identifiers_from_device(device),
             model=device.model,
             name=f"{device.protocol} {device.model} {device.address}",
         )
-        self._attr_unique_id = slugify(device.device_id)
-        self._device = device
-        self._event = (
-            RfDeviceEvent(device=device, data=event_data) if event_data else None
-        )
+        self._attr_unique_id = slugify.slugify(device.device_id)
+        self._event_data = event_data
         self._device_id = device.device_id
 
     async def async_added_to_hass(self) -> None:
         """Restore RfPlayer device from last event stored in attributes."""
         if (
-            self._event is None
+            self._event_data is None
             and (old_state := await self.async_get_last_state()) is not None
-            and (json_event := old_state.attributes.get(ATTR_EVENT))
         ):
-            self._event = json.load(json_event)
+            json_event_data = cast(str, old_state.attributes.get(ATTR_EVENT_DATA))
+            self._event_data = json.loads(json_event_data)
 
-        if self._event:
-            self._apply_event(self._event)
+        if self._event_data:
+            self._apply_event(self._event_data)
 
         self.async_on_remove(
-            async_dispatcher_connect(self.hass, SIGNAL_EVENT, self._handle_event)
+            async_dispatcher_connect(
+                self.hass, SIGNAL_RFPLAYER_EVENT, self._handle_event
+            )
         )
 
     @property
     def extra_state_attributes(self) -> dict[str, str] | None:
         """Return the device state attributes."""
-        if not self._event:
+        if not self._event_data:
             return None
-        return {ATTR_EVENT: json.dumps(self._event)}
+        return {ATTR_EVENT_DATA: json.dumps(self._event_data)}
 
     def _event_applies(self, event: RfDeviceEvent) -> bool:
         """Check if event applies to me."""
-        # Otherwise, the event only applies to the matching device.
         return event.device.device_id == self._device_id
 
-    def _apply_event(self, event: RfDeviceEvent) -> None:
+    def _apply_event(self, event_data: RfPlayerRawEvent) -> None:
         """Apply a received event."""
-        self._event = event
+        self._event_data = event_data
 
     @callback
     def _handle_event(self, event: RfDeviceEvent) -> None:
-        """Handle a reception of data, overridden by other classes."""
+        """Check if event applies to me and update."""
+        if not self._event_applies(event):
+            return
+
+        self._apply_event(event.data)
+
+        self.async_write_ha_state()
 
 
 class RfDeviceCommandEntity(RfDeviceEntity):
@@ -432,10 +437,10 @@ class RfDeviceCommandEntity(RfDeviceEntity):
     def __init__(
         self,
         device: RfDeviceId,
-        event: RfDeviceEvent | None = None,
+        event_data: RfPlayerRawEvent | None = None,
     ) -> None:
         """Initialzie a switch or light device."""
-        super().__init__(device, event_data=event)
+        super().__init__(device, event_data=event_data)
 
     async def _async_send[*_Ts](
         self, fun: Callable[[RfPlayerClient, *_Ts], None], *args: *_Ts

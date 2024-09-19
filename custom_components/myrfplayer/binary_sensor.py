@@ -6,11 +6,15 @@ import logging
 from typing import cast
 
 from custom_components.myrfplayer import RfDeviceEntity, async_setup_platform_entry
-from custom_components.myrfplayer.rfplayerlib.device import RfDeviceEvent, RfDeviceId
-from custom_components.myrfplayer.rfplayerlib.protocol import JsonPacketType
+from custom_components.myrfplayer.rfplayerlib.device import RfDeviceId
+from custom_components.myrfplayer.rfplayerlib.protocol import (
+    JsonPacketType,
+    RfPlayerRawEvent,
+)
 from custom_components.myrfplayer.rfprofiles.registry import (
-    PlatformConfig,
-    SensorProfileConfig,
+    AnyRfpPlatformConfig,
+    RfpPlatformConfig,
+    RfpSensorConfig,
 )
 from homeassistant.components.binary_sensor import (
     BinarySensorDeviceClass,
@@ -19,7 +23,7 @@ from homeassistant.components.binary_sensor import (
 )
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import Platform
-from homeassistant.core import HomeAssistant, callback
+from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity import Entity
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
@@ -27,26 +31,29 @@ _LOGGER = logging.getLogger(__name__)
 
 
 def _get_entity_description(
-    key: str, config: PlatformConfig
+    config: AnyRfpPlatformConfig,
 ) -> BinarySensorEntityDescription:
     return BinarySensorEntityDescription(
-        key=key, device_class=BinarySensorDeviceClass(config.device_class)
+        key=config.name,
+        device_class=BinarySensorDeviceClass(config.device_class)
+        if config.device_class
+        else None,
     )
 
 
 def _builder(
     device: RfDeviceId,
-    platform_config: dict[str, PlatformConfig],
-    event: RfDeviceEvent | None,
+    platform_config: list[AnyRfpPlatformConfig],
+    event_data: RfPlayerRawEvent | None,
 ) -> list[Entity]:
     return [
         MyRfPlayerBinarySensor(
             device,
-            _get_entity_description(key, config),
+            _get_entity_description(config),
             config,
-            event=event,
+            event_data=event_data,
         )
-        for key, config in platform_config.items()
+        for config in platform_config
     ]
 
 
@@ -58,6 +65,7 @@ async def async_setup_entry(
     """Set up config rf device entry."""
 
     await async_setup_platform_entry(
+        hass,
         config_entry,
         async_add_entities,
         Platform.BINARY_SENSOR,
@@ -75,36 +83,22 @@ class MyRfPlayerBinarySensor(RfDeviceEntity, BinarySensorEntity):
         self,
         device: RfDeviceId,
         entity_description: BinarySensorEntityDescription,
-        rfplayer_config: PlatformConfig,
-        event: RfDeviceEvent | None,
+        platform_config: RfpPlatformConfig,
+        event_data: RfPlayerRawEvent | None,
     ) -> None:
         """Initialize the RfPlayer sensor."""
         super().__init__(device)
         self.entity_description = entity_description
-        assert isinstance(rfplayer_config, SensorProfileConfig)
-        self._rfplayer_config = cast(SensorProfileConfig, rfplayer_config)
-        self._event = event
+        assert isinstance(platform_config, RfpSensorConfig)
+        self._config = cast(RfpSensorConfig, platform_config)
+        self._event_data = event_data
+        # TODO add support for all_on / all_off group commands. extract group id from device id
 
-    def _apply_event(self, event: RfDeviceEvent) -> None:
+    def _apply_event(self, event_data: RfPlayerRawEvent) -> None:
         """Apply command from RfPlayer."""
-        super()._apply_event(event)
-        assert isinstance(event.data, JsonPacketType)
-        self._attr_is_on = bool(self._rfplayer_config.sensor.get_value(event.data))
+        super()._apply_event(event_data)
 
-    @callback
-    def _handle_event(self, event: RfDeviceEvent) -> None:
-        """Check if event applies to me and update."""
-        if not self._event_applies(event):
-            return
+        _LOGGER.debug("Binary sensor update %s ", self._device_id)
 
-        _LOGGER.debug(
-            "Binary sensor update %s (Proto: %s Addr: %s Model: %s)",
-            event.device.device_id,
-            event.device.protocol,
-            event.device.address,
-            event.device.model,
-        )
-
-        self._apply_event(event)
-
-        self.async_write_ha_state()
+        assert isinstance(event_data, JsonPacketType)
+        self._attr_is_on = bool(self._config.config.get_value(event_data))

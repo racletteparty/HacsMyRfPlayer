@@ -9,11 +9,15 @@ import math
 from typing import cast
 
 from custom_components.myrfplayer import RfDeviceEntity, async_setup_platform_entry
-from custom_components.myrfplayer.rfplayerlib.device import RfDeviceEvent, RfDeviceId
-from custom_components.myrfplayer.rfplayerlib.protocol import JsonPacketType
+from custom_components.myrfplayer.rfplayerlib.device import RfDeviceId
+from custom_components.myrfplayer.rfplayerlib.protocol import (
+    JsonPacketType,
+    RfPlayerRawEvent,
+)
 from custom_components.myrfplayer.rfprofiles.registry import (
-    PlatformConfig,
-    SensorProfileConfig,
+    AnyRfpPlatformConfig,
+    RfpPlatformConfig,
+    RfpSensorConfig,
 )
 from homeassistant.components.sensor import (
     SensorDeviceClass,
@@ -22,7 +26,7 @@ from homeassistant.components.sensor import (
 )
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import Platform
-from homeassistant.core import HomeAssistant, callback
+from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity import Entity
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.typing import StateType
@@ -31,29 +35,31 @@ _LOGGER = logging.getLogger(__name__)
 
 
 def _get_entity_description(
-    key: str, config: PlatformConfig
+    config: AnyRfpPlatformConfig,
 ) -> SensorEntityDescription:
-    assert isinstance(config, SensorProfileConfig)
+    assert isinstance(config, RfpSensorConfig)
     return SensorEntityDescription(
-        key=key,
-        device_class=SensorDeviceClass(config.device_class),
+        key=config.name,
+        device_class=SensorDeviceClass(config.device_class)
+        if config.device_class
+        else None,
         native_unit_of_measurement=config.unit,
     )
 
 
 def _builder(
     device: RfDeviceId,
-    platform_config: dict[str, PlatformConfig],
-    event: RfDeviceEvent | None,
+    platform_config: list[AnyRfpPlatformConfig],
+    event_data: RfPlayerRawEvent | None,
 ) -> list[Entity]:
     return [
         MyRfPlayerSensor(
             device,
-            _get_entity_description(key, config),
+            _get_entity_description(config),
             config,
-            event=event,
+            event_data=event_data,
         )
-        for key, config in platform_config.items()
+        for config in platform_config
     ]
 
 
@@ -65,6 +71,7 @@ async def async_setup_entry(
     """Set up config rf device entry."""
 
     await async_setup_platform_entry(
+        hass,
         config_entry,
         async_add_entities,
         Platform.SENSOR,
@@ -86,39 +93,27 @@ class MyRfPlayerSensor(RfDeviceEntity, SensorEntity):
         self,
         device: RfDeviceId,
         entity_description: SensorEntityDescription,
-        rfplayer_config: PlatformConfig,
-        event: RfDeviceEvent | None,
+        platform_config: RfpPlatformConfig,
+        event_data: RfPlayerRawEvent | None,
     ) -> None:
         """Initialize the RFXtrx sensor."""
         super().__init__(device)
         self.entity_description = entity_description
-        assert isinstance(rfplayer_config, SensorProfileConfig)
-        self._rfplayer_config = cast(SensorProfileConfig, rfplayer_config)
-        self._event = event
+        assert isinstance(platform_config, RfpSensorConfig)
+        self._config = cast(RfpSensorConfig, platform_config)
+        self._event_data = event_data
 
     @property
     def native_value(self) -> StateType | date | datetime | Decimal:
         """Return the state of the sensor."""
-        if not self._event:
+        if not self._event_data:
             return None
-        assert isinstance(self._event.data, JsonPacketType)
-        str_value = self._rfplayer_config.sensor.get_value(self._event.data)
+        assert isinstance(self._event_data, JsonPacketType)
+        str_value = self._config.config.get_value(self._event_data)
         return float(str_value) if str_value else math.nan
 
-    @callback
-    def _handle_event(self, event: RfDeviceEvent) -> None:
-        """Check if event applies to me and update."""
-        if not self._event_applies(event):
-            return
+    def _apply_event(self, event_data: RfPlayerRawEvent) -> None:
+        """Apply command from RfPlayer."""
+        super()._apply_event(event_data)
 
-        _LOGGER.debug(
-            "Sensor update %s (Proto: %s Addr: %s Model: %s)",
-            event.device.device_id,
-            event.device.protocol,
-            event.device.address,
-            event.device.model,
-        )
-
-        self._apply_event(event)
-
-        self.async_write_ha_state()
+        _LOGGER.debug("Sensor update %s", self._device_id)
