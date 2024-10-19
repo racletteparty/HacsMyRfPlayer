@@ -169,6 +169,4 @@ class MyRfPlayerClimate(RfDeviceEntity, ClimateEntity):
 
             self._attr_preset_mode = self._config.preset_modes[preset_code]
 
-        _LOGGER.debug("Climate update %s", self._device_id.id_string)
-
         return True
