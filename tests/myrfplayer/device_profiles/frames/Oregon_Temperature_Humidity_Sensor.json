@@ -25,7 +25,7 @@
             "lowBatt": "1",
             "measures": [
               { "type": "temperature", "value": "25.3", "unit": "°" },
-              { "type": "humidity", "value": "50", "unit": "%" }
+              { "type": "hygrometry", "value": "50", "unit": "%" }
             ]
           }
         }
@@ -40,7 +40,7 @@
       "sensor": {
         "Temperature": {
           "value": "25.3",
-          "unit": "°"
+          "unit": "°C"
         },
         "Humidity": {
           "value": "50",

@@ -133,8 +133,6 @@ class MyRfPlayerLight(RfDeviceEntity, LightEntity):
             _LOGGER.info("Unsupported light command %s", command)
             return False
 
-        _LOGGER.debug("Light update %s", self._device_id.id_string)
-
         return True
 
     def _group_event(self, event: RfDeviceEvent) -> bool:

@@ -104,8 +104,6 @@ class MyRfPlayerSwitch(RfDeviceEntity, SwitchEntity):
             _LOGGER.info("Unsupported switch command %s", command)
             return False
 
-        _LOGGER.debug("Switch update %s", self._device_id.id_string)
-
         return True
 
     def _group_event(self, event: RfDeviceEvent) -> bool:

@@ -5,6 +5,7 @@ from typing import cast
 from unittest.mock import Mock, call
 
 import pytest
+from pytest_mock import MockerFixture
 
 from custom_components.myrfplayer.rfplayerlib.protocol import RfplayerProtocol
 
@@ -78,7 +79,7 @@ def test_received_strip(test_protocol: RfplayerProtocol):
 
 
 def test_received_invalid(test_protocol: RfplayerProtocol):
-    test_protocol.data_received(b"ZIA33\n\r")
+    test_protocol.data_received(b"ZIA33 \n\r")
 
     cb = cast(Mock, test_protocol.event_callback)
     cb.assert_not_called()
@@ -108,6 +109,24 @@ async def test_send_request(test_protocol: RfplayerProtocol):
 
     tr.write.assert_called_once_with(f"ZIA++{body}\n\r".encode())
     assert actual == expected
+
+
+@pytest.mark.asyncio
+async def test_send_command_error(test_protocol: RfplayerProtocol, mocker: MockerFixture):
+    logger_mock = mocker.patch("custom_components.myrfplayer.rfplayerlib.protocol._LOGGER")
+    tr = cast(Mock, test_protocol.transport)
+
+    def send_response(data):
+        test_protocol.data_received(b"ZIA--\n\rerror request number=0\n\rSyntax error: ON X2DELEC A0 %3\n\r")
+
+    tr.write.side_effect = send_response
+
+    body = "ON X2DELEC A0 %3"
+    actual = await test_protocol.send_raw_request(body)
+
+    tr.write.assert_called_once_with(f"ZIA++{body}\n\r".encode())
+    assert actual == ""
+    logger_mock.warning.assert_called()
 
 
 def test_connection_lost_error(test_protocol: RfplayerProtocol):

@@ -90,16 +90,20 @@ async def async_setup_platform_entry(
         @callback
         def _update(event: RfDeviceEvent) -> None:
             if event.id_string in string_ids:
-                _LOGGER.debug("Device {device_id.id_string} already configured for platform {platform}")
                 return
+
+            # Add the device to the list of already processed devices
+            # so that we don't try to match a device profile again
+            # regardless of whether the platform is supported or not
+            string_ids.add(event.id_string)
+
             device_info = build_device_info_from_event(profile_registry, event)
             device_id = build_device_id_from_device_info(device_info)
             platform_config = profile_registy.get_platform_config(device_info[CONF_PROFILE_NAME], platform)
             if not platform_config:
-                _LOGGER.debug("Device {device_id.id_string} does not support platform {platform}")
+                _LOGGER.debug("Device %s does not support platform %s", event.id_string, platform)
                 return
 
-            string_ids.add(event.id_string)
             async_add_entities(builder(device_id, platform_config, event.data))
 
         config_entry.async_on_unload(
@@ -189,6 +193,7 @@ class RfDeviceEntity(RestoreEntity):
             return
 
         if self._apply_event(event.data):
+            _LOGGER.debug("Device %s update: %s %s", self._device_id.id_string, self.platform.domain, self.name)
             self.async_write_ha_state()
 
     @callback

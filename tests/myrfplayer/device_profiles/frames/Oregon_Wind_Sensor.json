@@ -44,7 +44,7 @@
         },
         "Direction": {
           "value": "225",
-          "unit": "degree"
+          "unit": "°"
         },
         "Rf Level": {
           "value": "-64",

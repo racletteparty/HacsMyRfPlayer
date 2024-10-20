@@ -45,6 +45,12 @@ When automatic device creation is enabled, the RF device will be created with th
 
 ## Device profiles
 
+A devic profile defines the mapping between RfPlayer JSON events / commands and Home Assistant platforms attributes / services.
+The mapping is described in a YAML file. You can find the latest version of the [device profiles here](https://github.com/racletteparty/HacsMyRfPlayer/blob/main/custom_components/myrfplayer/device-profiles.yaml).
+Platform attributes are extracted from the JSON payload using [JSON path](https://en.wikipedia.org/wiki/JSONPath) expressions.
+
+List of device profiles verification with real devices:
+
 | Profile                                     | Event verified | Command verified | Comment |
 | ------------------------------------------- | -------------- | ---------------- | ------- |
 | X10 DOMIA Switch                            | ❌             | ❌               |
@@ -73,7 +79,7 @@ When automatic device creation is enabled, the RF device will be created with th
 ## Future improvements
 
 - Add user-defined device profiles
-- Add actions to RF devices like association
+- Add actions to RF devices like `associate`
 - Move device configuration (area,...) to new device instead of redirecting events
 - Add more platforms siren, events...
 

@@ -18,7 +18,11 @@ class RfPlayerEventData(dict):
 
 
 def _valid_packet(line: str):
-    return len(line) > PACKET_HEADER_LEN
+    return len(line) >= PACKET_HEADER_LEN
+
+
+def _command_error(line: str):
+    return line.startswith(("error request number", "Syntax error:"))
 
 
 class RfplayerProtocol(asyncio.Protocol):
@@ -83,10 +87,15 @@ class RfplayerProtocol(asyncio.Protocol):
             self.response_packet = body
             self.response_event.set()
         elif header == "ZIA33":
-            self.event_callback(cast(RfPlayerEventData, json.loads(body)))
+            try:
+                self.event_callback(cast(RfPlayerEventData, json.loads(body)))
+            except json.JSONDecodeError as e:
+                _LOGGER.warning("Invalid JSON packet: %s", e)
         elif header in ["ZIA00", "ZIA11", "ZIA22", "ZIA44", "ZIA66"]:
             _LOGGER.warning("unsupported packet format: %s", header)
             _LOGGER.debug("packet body: %s", body)
+        elif _command_error(raw_packet):
+            _LOGGER.warning("Command error: %s", raw_packet)
         else:
             _LOGGER.warning("dropping invalid packet: %s", raw_packet)
 
