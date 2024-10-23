@@ -75,6 +75,7 @@ List of device profiles verification with real devices:
 | X2D Thermostat Gas                          | ❌             | ❌               |
 | X2D Detector/Sensor                         | ❌             | ❌               |
 | X2D Shutter                                 | ❌             | ❌               |
+| Edision Temperature Sensor                  | ✅             |                  | No humidity sensor support
 
 ## Future improvements
 
