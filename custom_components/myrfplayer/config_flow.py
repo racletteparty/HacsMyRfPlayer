@@ -98,7 +98,6 @@ class RfPlayerOptionsFlowHandler(OptionsFlow):
     """Handle a RFPLayer options flow."""
 
     device_registry: dr.DeviceRegistry
-    device_entries: list[dr.DeviceEntry]
 
     def __init__(self, config_entry: ConfigEntry) -> None:
         """Initialize."""
@@ -106,6 +105,8 @@ class RfPlayerOptionsFlowHandler(OptionsFlow):
 
     async def async_step_init(self, user_input: dict[str, Any] | None = None) -> FlowResult:
         """Manage the options."""
+        self.device_registry = dr.async_get(self.hass)
+
         return self.async_show_menu(
             step_id="init",
             menu_options={
@@ -236,10 +237,7 @@ class RfPlayerOptionsFlowHandler(OptionsFlow):
         self.hass.async_create_task(self.hass.config_entries.async_reload(self.config_entry.entry_id))
 
     def _list_rf_devices(self) -> dict[str, str]:
-        device_registry = dr.async_get(self.hass)
-        device_entries = dr.async_entries_for_config_entry(device_registry, self.config_entry.entry_id)
-        self.device_registry = device_registry
-        self.device_entries = device_entries
+        device_entries = dr.async_entries_for_config_entry(self.device_registry, self.config_entry.entry_id)
 
         return {entry.id: self._get_device_name(entry) for entry in device_entries}
 
