@@ -30,6 +30,7 @@ from tests.myrfplayer.constants import (
     CHACON_LIGHT_ENTITY_ID,
     CHACON_LIGHT_FRIENDLY_NAME,
     CHACON_ON_EVENT_DATA,
+    CHACON_UNIT_CODE,
 )
 
 
@@ -67,7 +68,7 @@ async def test_light(serial_connection_mock: Mock, hass: HomeAssistant, test_pro
     assert state
     assert state.state == STATE_ON
     assert state.attributes.get(ATTR_BRIGHTNESS) == 255
-    tr.write.assert_called_once_with(bytearray(f"ZIA++ON CHACON ID {CHACON_ADDRESS}\n\r".encode()))
+    tr.write.assert_called_once_with(bytearray(f"ZIA++ON CHACON ID {CHACON_UNIT_CODE}\n\r".encode()))
     tr.write.reset_mock()
 
     await hass.services.async_call(
@@ -81,7 +82,7 @@ async def test_light(serial_connection_mock: Mock, hass: HomeAssistant, test_pro
     assert state
     assert state.state == STATE_ON
     assert state.attributes.get(ATTR_BRIGHTNESS) == 100
-    tr.write.assert_called_once_with(bytearray(f"ZIA++DIM CHACON ID {CHACON_ADDRESS} %39\n\r".encode()))
+    tr.write.assert_called_once_with(bytearray(f"ZIA++DIM CHACON ID {CHACON_UNIT_CODE} %39\n\r".encode()))
     tr.write.reset_mock()
 
     await hass.services.async_call(
@@ -95,7 +96,7 @@ async def test_light(serial_connection_mock: Mock, hass: HomeAssistant, test_pro
     assert state
     assert state.state == STATE_OFF
     assert state.attributes[ATTR_BRIGHTNESS] is None
-    tr.write.assert_called_once_with(bytearray(f"ZIA++OFF CHACON ID {CHACON_ADDRESS}\n\r".encode()))
+    tr.write.assert_called_once_with(bytearray(f"ZIA++OFF CHACON ID {CHACON_UNIT_CODE}\n\r".encode()))
 
 
 async def test_automatic_add(serial_connection_mock: Mock, hass: HomeAssistant, mocker: MockerFixture):

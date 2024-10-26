@@ -18,27 +18,27 @@
   },
   "options": {
     "step": {
-      "gateway_options": {
+      "configure_gateway": {
         "title": "RFPlayer Options",
         "data": {
           "automatic_add": "Add device automatically when signal received",
           "reconnect_interval": "Reconnect interval",
           "receiver_protocols": "List of enabled receiver protocols",
-          "add_device": "Configure RF device manually",
-          "device": "Update already configured RF device"
+          "init_commands": "RfPlayer initialization commands"
         }
       },
       "add_rf_device": {
-        "title": "Configure RF device manually",
+        "title": "Add RF device",
         "data": {
           "protocol": "Device protocol",
           "address": "Device address",
           "profile_name": "Device profile"
         }
       },
-      "rf_device_options": {
-        "title": "RF Device Options",
+      "configure_rf_device": {
+        "title": "Configure RF device",
         "data": {
+          "device": "Select RF device",
           "redirect_address": "Redirect address"
         }
       }
@@ -52,6 +52,20 @@
         "command": {
           "name": "Command",
           "description": "command using RFPlayer format."
+        }
+      }
+    },
+    "send_pairing_command": {
+      "name": "Send pairing command",
+      "description": "Send a pairing command to a RF device.",
+      "fields": {
+        "protocol": {
+          "name": "Protocol",
+          "description": "The RF device protocol."
+        },
+        "address": {
+          "name": "Address",
+          "description": "Device address. Do not use X10-form (e.g. 1 instead of A2)."
         }
       }
     },

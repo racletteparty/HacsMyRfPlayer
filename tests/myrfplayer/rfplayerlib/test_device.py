@@ -25,14 +25,14 @@ def test_raw_event_callback_blyss():
     assert event.data == BLYSS_OFF_EVENT_DATA
 
 
-def test_area_unit():
+def test_group_unit_code():
     device = RfDeviceId(protocol="X2D", address="2095907073")
-    assert device.group_code == "1"
-    assert device.unit_code == "130994192"
+    assert device.group_code == "130994192"
+    assert device.unit_code == "1"
 
     device = RfDeviceId(protocol="CHACON", address="146139014")
-    assert device.group_code == "6"
-    assert device.unit_code == "2283422"
+    assert device.group_code == "2283422"
+    assert device.unit_code == "6"
 
     device = RfDeviceId(protocol="X10", address="123")
     assert device.group_code == "7"
@@ -44,4 +44,4 @@ def test_area_unit():
 
     device = RfDeviceId(protocol="VISIONIC", address="123")
     assert device.group_code is None
-    assert device.unit_code is None
+    assert device.unit_code == "123"

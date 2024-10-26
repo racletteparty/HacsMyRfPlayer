@@ -128,6 +128,7 @@ BLYSS_BINARY_SENSOR_SMOKE_FRIENDLY_NAME = f"BLYSS {BLYSS_SMOKE_ADDRESS} Smoke"
 # ===============
 
 CHACON_ADDRESS = "146139014"
+CHACON_UNIT_CODE = "6"
 CHACON_ON_EVENT_DATA = {
     "frame": {
         "header": {
@@ -148,7 +149,7 @@ CHACON_ON_EVENT_DATA = {
         },
     }
 }
-CHACON_GROUP_ADDRESS = "6"
+CHACON_GROUP_ADDRESS = "146139008"
 CHACON_ALL_ON_EVENT_DATA = {
     "frame": {
         "header": {
@@ -196,7 +197,7 @@ CHACON_SWITCH_DEVICE_INFO = {
 # X2D Examples
 # ===============
 
-X2D_AREA = "1"
+X2D_UNIT_CODE = "1"
 X2D_ADDRESS = "2095907073"
 X2D_ON_EVENT_DATA = {
     "frame": {
@@ -264,6 +265,7 @@ X2D_PRESET_MODE = "Comfort"
 # ===============
 
 RTS_ADDRESS = "123"
+RTS_UNIT_CODE = "11"
 RTS_DOWN_EVENT_DATA = {
     "frame": {
         "header": {

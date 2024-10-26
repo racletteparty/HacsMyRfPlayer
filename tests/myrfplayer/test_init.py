@@ -105,6 +105,21 @@ async def test_send_raw_command(
 
 
 @pytest.mark.asyncio
+async def test_send_pairing_command(
+    serial_connection_mock: Mock, hass: HomeAssistant, test_protocol: RfplayerProtocol
+) -> None:
+    """Test configuration."""
+    await setup_rfplayer_test_cfg(hass, device="/dev/null", devices={})
+
+    await hass.services.async_call(
+        "myrfplayer", "send_pairing_command", {"protocol": "CHACON", "address": "1"}, blocking=True
+    )
+
+    tr = cast(Mock, test_protocol.transport)
+    tr.write.assert_called_once_with(bytearray(b"ZIA++ASSOC CHACON ID 1\n\r"))
+
+
+@pytest.mark.asyncio
 async def test_simulate_event(
     serial_connection_mock: Mock,
     hass: HomeAssistant,
