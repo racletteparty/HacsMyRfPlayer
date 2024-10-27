@@ -72,30 +72,29 @@ List of device profiles verification with real devices:
 | Jamming Detector                            | ❌             | ❌               |
 | X10 CHACON KD101 BLYSS FS20 Switch          | ❌             | ❌               |
 | X10 CHACON KD101 BLYSS FS20 Lighting        | ❌             | ❌               |
-| X10 CHACON KD101 BLYSS FS20 On/Off          | ❌             | ❌               |
+| X10 CHACON KD101 BLYSS FS20 On/Off          | ✅             | ❌               |
 | X10 CHACON KD101 BLYSS FS20 Motion detector | ❌             | ❌               |
 | X10 CHACON KD101 BLYSS FS20 Smoke detector  | ❌             | ❌               |
 | Visionic Sensor/Detector                    | ❌             | ❌               |
 | Visionic Remote                             | ❌             | ❌               |
-| RTS Shutter                                 | ❌             | ❌               |
+| RTS Shutter                                 | ✅             | ❌               |
 | RTS Portal                                  | ❌             | ❌               |
-| Oregon Temperature Sensor                   | ❌             | ❌               |
-| Oregon Temperature/Humidity Sensor          | ❌             | ❌               |
+| Oregon Temperature Sensor                   | ✅             |                  |
+| Oregon Temperature/Humidity Sensor          | ✅             |                  |
 | Oregon Pressure Sensor                      | ❌             | ❌               |
 | Oregon Wind Sensor                          | ❌             | ❌               |
 | Oregon UV Sensor                            | ❌             | ❌               |
 | OWL Power Meter                             | ❌             | ❌               |
 | Oregon Rain Sensor                          | ❌             | ❌               |
-| X2D Thermostat Elec                         | ❌             | ❌               |
+| X2D Thermostat Elec                         | ✅             | ✅               |
 | X2D Thermostat Gas                          | ❌             | ❌               |
 | X2D Detector/Sensor                         | ❌             | ❌               |
 | X2D Shutter                                 | ❌             | ❌               |
-| Edision Temperature Sensor                  | ✅             |                  | No humidity sensor support |
+| Edisio Temperature Sensor                   | ✅             |                  | No humidity sensor support |
 
 ## Future improvements
 
 - Add user-defined device profiles
-- Add actions to RF devices like `associate`
 - Move device configuration (area,...) to new device instead of redirecting events
 - Add more platforms siren, events...
 
