@@ -12,9 +12,9 @@ from .const import CONF_REDIRECT_ADDRESS, DOMAIN
 
 def get_device_id_string_from_identifiers(
     identifiers: set[tuple[str, str]],
-) -> str:
+) -> str | None:
     """Calculate the device id from a device identifier."""
-    return next((x[1] for x in identifiers if x[0] == DOMAIN), "_undefined_")
+    return next((x[1] for x in identifiers if x[0] == DOMAIN), None)
 
 
 def get_identifiers_from_device_id(

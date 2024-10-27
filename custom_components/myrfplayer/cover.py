@@ -30,16 +30,11 @@ def _get_entity_description(
 
 
 def _builder(
-    device: RfDeviceId,
-    platform_config: list[AnyRfpPlatformConfig],
-    event_data: RfPlayerEventData | None,
+    device: RfDeviceId, platform_config: list[AnyRfpPlatformConfig], event_data: RfPlayerEventData | None, verbose
 ) -> list[Entity]:
     return [
         MyRfPlayerCover(
-            device,
-            _get_entity_description(config, event_data),
-            config,
-            event_data=event_data,
+            device, _get_entity_description(config, event_data), config, event_data=event_data, verbose=verbose
         )
         for config in platform_config
     ]
@@ -74,9 +69,10 @@ class MyRfPlayerCover(RfDeviceEntity, CoverEntity):
         entity_description: CoverEntityDescription,
         platform_config: RfpPlatformConfig,
         event_data: RfPlayerEventData | None,
+        verbose: bool,
     ) -> None:
         """Initialize the RfPlayer cover."""
-        super().__init__(device, platform_config.name)
+        super().__init__(device_id=device, name=platform_config.name, event_data=event_data, verbose=verbose)
         self.entity_description = entity_description
         assert isinstance(platform_config, RfpCoverConfig)
         self._config = cast(RfpCoverConfig, platform_config)
@@ -95,12 +91,14 @@ class MyRfPlayerCover(RfDeviceEntity, CoverEntity):
 
     async def async_open_cover(self, **kwargs: Any) -> None:
         """Open cover."""
+        _LOGGER.debug("open %s cover", self.entity_id)
         await self._send_command(self._config.make_cmd_open(**self._command_parameters()))
         self._attr_is_closed = False
         self.async_write_ha_state()
 
     async def async_close_cover(self, **kwargs: Any) -> None:
-        """Open cover."""
+        """Close cover."""
+        _LOGGER.debug("close %s cover", self.entity_id)
         await self._send_command(self._config.make_cmd_close(**self._command_parameters()))
         self._attr_is_closed = True
         self.async_write_ha_state()
@@ -108,6 +106,7 @@ class MyRfPlayerCover(RfDeviceEntity, CoverEntity):
     async def async_stop_cover(self, **kwargs: Any) -> None:
         """Stop cover."""
         assert self._config.cmd_stop
+        _LOGGER.debug("stop %s cover", self.entity_id)
         await self._send_command(self._config.make_cmd_stop(**self._command_parameters()))
         self._attr_is_closed = False  # Assume open if stopped
         self.async_write_ha_state()

@@ -26,16 +26,11 @@ def _get_entity_description(
 
 
 def _builder(
-    device: RfDeviceId,
-    platform_config: list[AnyRfpPlatformConfig],
-    event_data: RfPlayerEventData | None,
+    device: RfDeviceId, platform_config: list[AnyRfpPlatformConfig], event_data: RfPlayerEventData | None, verbose: bool
 ) -> list[Entity]:
     return [
         MyRfPlayerSwitch(
-            device,
-            _get_entity_description(config, event_data),
-            config,
-            event_data=event_data,
+            device, _get_entity_description(config, event_data), config, event_data=event_data, verbose=verbose
         )
         for config in platform_config
     ]
@@ -68,24 +63,24 @@ class MyRfPlayerSwitch(RfDeviceEntity, SwitchEntity):
         entity_description: SwitchEntityDescription,
         platform_config: RfpPlatformConfig,
         event_data: RfPlayerEventData | None,
+        verbose: bool,
     ) -> None:
         """Initialize the RfPlayer switch."""
-        super().__init__(device, platform_config.name)
+        super().__init__(device_id=device, name=platform_config.name, event_data=event_data, verbose=verbose)
         self.entity_description = entity_description
         assert isinstance(platform_config, RfpSwitchConfig)
         self._config = cast(RfpSwitchConfig, platform_config)
-        self._event_data = event_data
 
     async def async_turn_on(self, **kwargs: Any) -> None:
         """Turn the device on."""
-        _LOGGER.info("turn on %s", self.entity_id)
+        _LOGGER.debug("turn on %s", self.entity_id)
         await self._send_command(self._config.make_cmd_turn_on(**self._command_parameters()))
         self._attr_is_on = True
         self.async_write_ha_state()
 
     async def async_turn_off(self, **kwargs: Any) -> None:
         """Turn the device off."""
-        _LOGGER.info("turn off %s", self.entity_id)
+        _LOGGER.debug("turn off %s", self.entity_id)
         await self._send_command(self._config.make_cmd_turn_off(**self._command_parameters()))
         self._attr_is_on = False
         self.async_write_ha_state()

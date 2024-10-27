@@ -30,16 +30,11 @@ def _get_entity_description(
 
 
 def _builder(
-    device: RfDeviceId,
-    platform_config: list[AnyRfpPlatformConfig],
-    event_data: RfPlayerEventData | None,
+    device: RfDeviceId, platform_config: list[AnyRfpPlatformConfig], event_data: RfPlayerEventData | None, verbose: bool
 ) -> list[Entity]:
     return [
         MyRfPlayerSensor(
-            device,
-            _get_entity_description(config, event_data),
-            config,
-            event_data=event_data,
+            device, _get_entity_description(config, event_data), config, event_data=event_data, verbose=verbose
         )
         for config in platform_config
     ]
@@ -77,9 +72,10 @@ class MyRfPlayerSensor(RfDeviceEntity, SensorEntity):
         entity_description: SensorEntityDescription,
         platform_config: RfpPlatformConfig,
         event_data: RfPlayerEventData | None,
+        verbose: bool,
     ) -> None:
         """Initialize the RfPlayer sensor."""
-        super().__init__(device, platform_config.name)
+        super().__init__(device_id=device, name=platform_config.name, event_data=event_data, verbose=verbose)
         self.entity_description = entity_description
         assert isinstance(platform_config, RfpSensorConfig)
         self._config = cast(RfpSensorConfig, platform_config)

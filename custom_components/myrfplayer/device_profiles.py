@@ -243,9 +243,10 @@ class RfpDeviceProfile(BaseModel):
 class ProfileRegistry:
     """Registry to store RF device profiles."""
 
-    def __init__(self, filename: Path):
+    def __init__(self, filename: Path, verbose: bool):
         """Create a new registry."""
         self._registry: list[RfpDeviceProfile] = []
+        self.verbose = verbose
         with open(filename, encoding="utf-8") as f:
             self.register_profiles(f.read())
 
@@ -263,7 +264,7 @@ class ProfileRegistry:
         profile = next(matching_profiles, None)
 
         if not profile:
-            _LOGGER.warning("No matching profile for event %s", json.dumps(event_data))
+            _LOGGER.info("No matching profile for event %s", json.dumps(event_data))
             return None
         return profile.name
 
@@ -272,7 +273,7 @@ class ProfileRegistry:
         platform_config: list[AnyRfpPlatformConfig] = []
 
         if not profile_name:
-            _LOGGER.debug("No profile name provided")
+            _LOGGER.warning("No profile name provided")
             return platform_config
 
         matching_profiles = (entry for entry in self._registry if entry.name == profile_name)
@@ -284,7 +285,7 @@ class ProfileRegistry:
         else:
             platform_config = profile.platforms.get(platform)
             if not platform_config:
-                _LOGGER.debug("Platform %s not supported by profile %s", platform, profile.name)
+                self._verbose_debug("Platform %s not supported by profile %s", platform, profile.name)
 
         return platform_config
 
@@ -293,15 +294,11 @@ class ProfileRegistry:
         return [item.name for item in self._registry]
 
     def _event_is_matching(self, event_data: RfPlayerEventData, profile: RfpDeviceProfile):
-        if not isinstance(event_data, RfPlayerEventData | dict):
-            _LOGGER.debug("not matching: not a JSON RfPlayer event")
-            return False
-
         m = profile.match
         if m.protocol:
             protocol = event_data["frame"]["header"]["protocolMeaning"]
             if not re.match(m.protocol, protocol):
-                _LOGGER.debug(
+                self._verbose_debug(
                     "profile %s not matching: expected protocol %s, actual %s",
                     profile.name,
                     m.protocol,
@@ -310,13 +307,16 @@ class ProfileRegistry:
                 return False
         info_type = event_data["frame"]["header"]["infoType"]
         if info_type != m.info_type:
-            _LOGGER.debug("not matching: expected info type %s, actual %s", m.info_type, info_type)
+            self._verbose_debug(
+                "profile %s not matching: expected info type %s, actual %s", profile.name, m.info_type, info_type
+            )
             return False
         if m.sub_type:
             sub_type = event_data["frame"]["infos"]["subType"]
             if sub_type != m.sub_type:
-                _LOGGER.debug(
-                    "not matching: expected sub type %s, actual %s",
+                self._verbose_debug(
+                    "profile %s not matching: expected sub type %s, actual %s",
+                    profile.name,
                     m.sub_type,
                     sub_type,
                 )
@@ -324,18 +324,24 @@ class ProfileRegistry:
         if m.id_phy:
             id_phy = event_data["frame"]["infos"]["id_PHY"]
             if not re.match(m.id_phy, id_phy):
-                _LOGGER.debug("not matching: expected id phy %s, actual %s", m.id_phy, id_phy)
+                self._verbose_debug(
+                    "profile %s not matching: expected id phy %s, actual %s", profile.name, m.id_phy, id_phy
+                )
                 return False
         return True
 
+    def _verbose_debug(self, msg, *args, **kwargs):
+        if self.verbose:
+            _LOGGER.debug(msg, *args, **kwargs)
+
 
 @functools.lru_cache(maxsize=1)
-def _get_profile_registry() -> ProfileRegistry:
+def _get_profile_registry(verbose: bool) -> ProfileRegistry:
     """Get the profile registry singleton."""
     module_path = Path(os.path.abspath(__file__)).parent
-    return ProfileRegistry(module_path / "device-profiles.yaml")
+    return ProfileRegistry(module_path / "device-profiles.yaml", verbose)
 
 
-async def async_get_profile_registry(hass: HomeAssistant) -> ProfileRegistry:
+async def async_get_profile_registry(hass: HomeAssistant, verbose: bool) -> ProfileRegistry:
     """Asynchronously load the RF device profile registry."""
-    return await hass.async_add_executor_job(_get_profile_registry)
+    return await hass.async_add_executor_job(_get_profile_registry, verbose)

@@ -29,6 +29,7 @@ from homeassistant.helpers.restore_state import RestoreEntity
 from .const import (
     ATTR_EVENT_DATA,
     CONF_AUTOMATIC_ADD,
+    CONF_VERBOSE_MODE,
     DOMAIN,
     RFPLAYER_CLIENT,
     SIGNAL_RFPLAYER_AVAILABILITY,
@@ -44,11 +45,7 @@ async def async_setup_platform_entry(
     async_add_entities: AddEntitiesCallback,
     platform: Platform,
     builder: Callable[
-        [
-            RfDeviceId,
-            list[AnyRfpPlatformConfig],
-            RfPlayerEventData | None,
-        ],
+        [RfDeviceId, list[AnyRfpPlatformConfig], RfPlayerEventData | None, bool],
         list[Entity],
     ],
 ) -> None:
@@ -57,7 +54,7 @@ async def async_setup_platform_entry(
     # Set of device IDs already configured for the current platform
     string_ids: set[str] = set()
 
-    profile_registy = await async_get_profile_registry(hass)
+    profile_registry = await async_get_profile_registry(hass, entry_data.get(CONF_VERBOSE_MODE, False))
 
     # Add entities from config
     entities = []
@@ -70,7 +67,12 @@ async def async_setup_platform_entry(
             )
             continue
 
-        platform_config = profile_registy.get_platform_config(device_info.get(CONF_PROFILE_NAME), platform)
+        profile_name = device_info.get(CONF_PROFILE_NAME)
+        if profile_name is None:
+            _LOGGER.warning("Missing profile in device info for %s", id_string)
+            continue
+
+        platform_config = profile_registry.get_platform_config(profile_name, platform)
         if not platform_config:
             continue
 
@@ -78,33 +80,33 @@ async def async_setup_platform_entry(
         event_data = build_event_data_from_device_info(device_info)
 
         string_ids.add(id_string)
-        entities.extend(builder(device_id, platform_config, event_data))
+        entities.extend(builder(device_id, platform_config, event_data, entry_data.get(CONF_VERBOSE_MODE, False)))
 
     async_add_entities(entities)
-
-    profile_registry = await async_get_profile_registry(hass)
 
     # If automatic add is on, hookup listener
     if entry_data[CONF_AUTOMATIC_ADD]:
 
         @callback
         def _update(event: RfDeviceEvent) -> None:
-            if event.id_string in string_ids:
+            if event.device.id_string in string_ids:
                 return
 
             # Add the device to the list of already processed devices
             # so that we don't try to match a device profile again
             # regardless of whether the platform is supported or not
-            string_ids.add(event.id_string)
+            string_ids.add(event.device.id_string)
 
             device_info = build_device_info_from_event(profile_registry, event)
             device_id = build_device_id_from_device_info(device_info)
-            platform_config = profile_registy.get_platform_config(device_info[CONF_PROFILE_NAME], platform)
+            platform_config = profile_registry.get_platform_config(device_info[CONF_PROFILE_NAME], platform)
             if not platform_config:
-                _LOGGER.debug("Device %s does not support platform %s", event.id_string, platform)
+                _LOGGER.debug("Device %s does not support platform %s", event.device.id_string, platform)
                 return
 
-            async_add_entities(builder(device_id, platform_config, event.data))
+            async_add_entities(
+                builder(device_id, platform_config, event.data, entry_data.get(CONF_VERBOSE_MODE, False))
+            )
 
         config_entry.async_on_unload(
             async_dispatcher_connect(hass, SIGNAL_RFPLAYER_EVENT, _update)  # type: ignore[has-type]
@@ -123,12 +125,7 @@ class RfDeviceEntity(RestoreEntity):
     _device_id: RfDeviceId
     _event_data: RfPlayerEventData | None
 
-    def __init__(
-        self,
-        device_id: RfDeviceId,
-        name: str,
-        event_data: RfPlayerEventData | None = None,
-    ) -> None:
+    def __init__(self, device_id: RfDeviceId, name: str, event_data: RfPlayerEventData | None, verbose: bool) -> None:
         """Initialize the device."""
         self._attr_device_info = DeviceInfo(
             identifiers=get_identifiers_from_device_id(device_id),
@@ -143,6 +140,7 @@ class RfDeviceEntity(RestoreEntity):
         self._event_data = event_data
         self._device_id = device_id
         self.entity_id = f"{DOMAIN}.{device_id.id_string}.{name}"
+        self._verbose = verbose
 
     async def async_added_to_hass(self) -> None:
         """Restore RfPlayer device from last event stored in attributes."""
@@ -175,7 +173,9 @@ class RfDeviceEntity(RestoreEntity):
     def _event_applies(self, event: RfDeviceEvent) -> bool:
         """Check if event applies to me."""
         if self._group_event(event):
-            return event.device.group_code == self._device_id.group_code
+            return (event.device.protocol == self._device_id.protocol) and (
+                event.device.group_code == self._device_id.group_code
+            )
         return event.device.id_string == self._device_id.id_string
 
     def _group_event(self, event: RfDeviceEvent) -> bool:
@@ -193,12 +193,16 @@ class RfDeviceEntity(RestoreEntity):
             return
 
         if self._apply_event(event.data):
-            _LOGGER.debug("Device %s update: %s %s", self._device_id.id_string, self.platform.domain, self.name)
+            _LOGGER.debug("%s updated", self.entity_id)
             self.async_write_ha_state()
+        elif self._verbose:
+            _LOGGER.debug("%s not updated", self.entity_id)
 
     @callback
     def _handle_availability(self, available: bool) -> None:
         self._attr_available = available
+        if self._verbose:
+            _LOGGER.debug("%s availability updated %s", self.entity_id, str(available))
         self.async_write_ha_state()
 
     async def _send_command(self, command: str):

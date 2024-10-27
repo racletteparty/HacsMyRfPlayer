@@ -39,16 +39,11 @@ def _get_entity_description(
 
 
 def _builder(
-    device: RfDeviceId,
-    platform_config: list[AnyRfpPlatformConfig],
-    event_data: RfPlayerEventData | None,
+    device: RfDeviceId, platform_config: list[AnyRfpPlatformConfig], event_data: RfPlayerEventData | None, verbose: bool
 ) -> list[Entity]:
     return [
         MyRfPlayerClimate(
-            device,
-            _get_entity_description(config, event_data),
-            config,
-            event_data=event_data,
+            device, _get_entity_description(config, event_data), config, event_data=event_data, verbose=verbose
         )
         for config in platform_config
     ]
@@ -89,9 +84,10 @@ class MyRfPlayerClimate(RfDeviceEntity, ClimateEntity):
         entity_description: ClimateEntityDescription,
         platform_config: RfpPlatformConfig,
         event_data: RfPlayerEventData | None,
+        verbose: bool,
     ) -> None:
         """Initialize the RfPlayer light."""
-        super().__init__(device, platform_config.name)
+        super().__init__(device_id=device, name=platform_config.name, event_data=event_data, verbose=verbose)
         self.entity_description = entity_description
         assert isinstance(platform_config, RfpClimateConfig)
         self._config = cast(RfpClimateConfig, platform_config)
@@ -113,12 +109,14 @@ class MyRfPlayerClimate(RfDeviceEntity, ClimateEntity):
     async def async_set_hvac_mode(self, hvac_mode: HVACMode) -> None:
         """Set new target hvac mode."""
         if hvac_mode == HVACMode.HEAT:
+            _LOGGER.debug("set %s to heat mode", self.entity_id)
             await self._send_command(
                 self._config.make_cmd_turn_on(**self._command_parameters(preset_mode=self._attr_preset_mode))
             )
             self._attr_hvac_mode = hvac_mode
             self.async_write_ha_state()
         elif hvac_mode == HVACMode.OFF:
+            _LOGGER.debug("set %s off mode", self.entity_id)
             await self._send_command(
                 self._config.make_cmd_turn_off(**self._command_parameters(preset_mode=self._attr_preset_mode))
             )
@@ -129,6 +127,7 @@ class MyRfPlayerClimate(RfDeviceEntity, ClimateEntity):
 
     async def async_set_preset_mode(self, preset_mode: str) -> None:
         """Set preset mode."""
+        _LOGGER.debug("set %s to preset %s", self.entity_id, preset_mode)
         await self._send_command(self._config.make_cmd_set_mode(**self._command_parameters(preset_mode=preset_mode)))
         self._attr_preset_mode = preset_mode
         self.async_write_ha_state()

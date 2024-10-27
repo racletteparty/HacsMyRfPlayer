@@ -241,7 +241,7 @@
 - name: Oregon Temperature Sensor
   match:
     info_type: "4"
-    id_phy: "0x0|0x0000|0xEA4C"
+    id_phy: "0x0|0x0000|0xEA4C|0xCA48"
   platforms:
     binary_sensor:
       - name: "Low Battery"

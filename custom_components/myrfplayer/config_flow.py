@@ -25,13 +25,13 @@ from .const import (
     CONF_RECEIVER_PROTOCOLS,
     CONF_RECONNECT_INTERVAL,
     CONF_REDIRECT_ADDRESS,
+    CONF_VERBOSE_MODE,
     DEFAULT_RECEIVER_PROTOCOLS,
     DEFAULT_RECONNECT_INTERVAL,
     DOMAIN,
 )
 
 SELECT_DEVICE_EXCLUSION = "select_device"
-UPDATE_DEVICES_EXCLUSION = "update_devices"
 
 
 @HANDLERS.register(DOMAIN)
@@ -65,6 +65,7 @@ class RfplayerConfigFlow(ConfigFlow):
                     CONF_RECONNECT_INTERVAL: DEFAULT_RECONNECT_INTERVAL,
                     CONF_RECEIVER_PROTOCOLS: DEFAULT_RECEIVER_PROTOCOLS,
                     CONF_INIT_COMMANDS: None,
+                    CONF_VERBOSE_MODE: False,
                     CONF_DEVICES: {},
                     CONF_REDIRECT_ADDRESS: {},
                 }
@@ -118,39 +119,40 @@ class RfPlayerOptionsFlowHandler(OptionsFlow):
 
     async def async_step_configure_gateway(self, user_input: dict[str, Any] | None = None) -> FlowResult:
         """Prompt for gateway options."""
-        schema_errors: dict[str, Any] = {}
 
         if user_input is not None:
             global_options = {
                 CONF_AUTOMATIC_ADD: user_input[CONF_AUTOMATIC_ADD],
                 CONF_RECONNECT_INTERVAL: user_input[CONF_RECONNECT_INTERVAL],
                 CONF_RECEIVER_PROTOCOLS: user_input[CONF_RECEIVER_PROTOCOLS] or None,
-                CONF_INIT_COMMANDS: user_input.get(CONF_INIT_COMMANDS, None),
+                CONF_INIT_COMMANDS: user_input.get(CONF_INIT_COMMANDS),
+                CONF_VERBOSE_MODE: user_input.get(CONF_VERBOSE_MODE, False),
             }
 
             self.update_config_data(global_options=global_options)
 
             return self.async_create_entry(title="", data={})
 
+        data = self.config_entry.data
+
         options = {
             vol.Required(
                 CONF_AUTOMATIC_ADD,
-                default=True,
+                default=data.get(CONF_AUTOMATIC_ADD, True),
             ): bool,
             vol.Required(
                 CONF_RECONNECT_INTERVAL,
-                default=DEFAULT_RECONNECT_INTERVAL,
+                default=data.get(CONF_RECONNECT_INTERVAL, DEFAULT_RECONNECT_INTERVAL),
             ): int,
             vol.Required(
                 CONF_RECEIVER_PROTOCOLS,
-                default=["*"],
+                default=data.get(CONF_RECEIVER_PROTOCOLS, ["*"]),
             ): cv.multi_select(RECEIVER_MODES),
-            vol.Optional(
-                CONF_INIT_COMMANDS,
-            ): str,
+            vol.Optional(CONF_INIT_COMMANDS, default=data.get(CONF_INIT_COMMANDS)): str,
+            vol.Required(CONF_VERBOSE_MODE, default=data.get(CONF_VERBOSE_MODE, False)): bool,
         }
 
-        return self.async_show_form(step_id="configure_gateway", data_schema=vol.Schema(options), errors=schema_errors)
+        return self.async_show_form(step_id="configure_gateway", data_schema=vol.Schema(options))
 
     async def async_step_configure_rf_device(self, user_input: dict[str, Any] | None = None) -> ConfigFlowResult:
         """Manage RF device options."""
@@ -161,6 +163,7 @@ class RfPlayerOptionsFlowHandler(OptionsFlow):
             assert entry
 
             id_string = get_device_id_string_from_identifiers(entry.identifiers)
+            assert id_string
 
             devices: dict[str, dict[str, Any]] = {id_string: user_input}
             devices[id_string].setdefault(CONF_REDIRECT_ADDRESS, None)
@@ -174,10 +177,7 @@ class RfPlayerOptionsFlowHandler(OptionsFlow):
             vol.Optional(CONF_REDIRECT_ADDRESS): str,
         }
 
-        return self.async_show_form(
-            step_id="configure_rf_device",
-            data_schema=vol.Schema(option_schema),
-        )
+        return self.async_show_form(step_id="configure_rf_device", data_schema=vol.Schema(option_schema))
 
     async def async_step_add_rf_device(self, user_input: dict[str, Any] | None = None) -> ConfigFlowResult:
         """Add manuall a RF device."""
@@ -194,7 +194,7 @@ class RfPlayerOptionsFlowHandler(OptionsFlow):
             return self.async_create_entry(title="", data={})
 
         data = self.config_entry.data
-        profile_registry = await async_get_profile_registry(self.hass)
+        profile_registry = await async_get_profile_registry(self.hass, False)
 
         # New device
         option_schema = {
