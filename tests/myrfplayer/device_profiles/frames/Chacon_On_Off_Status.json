@@ -6,22 +6,27 @@
         "frame": {
           "header": {
             "frameType": "0",
+            "cluster": "0",
             "dataFlag": "0",
             "rfLevel": "-41",
-            "floorNoise": "-97",
+            "floorNoise": "-95",
             "rfQuality": "10",
             "protocol": "4",
             "protocolMeaning": "CHACON",
             "infoType": "1",
             "frequency": "433920"
           },
-          "infos": { "subType": "1", "id": "146139014", "subTypeMeaning": "ON" }
+          "infos": {
+            "subType": "0",
+            "id": "573467521",
+            "subTypeMeaning": "OFF"
+          }
         }
       }
     },
     "then": {
       "binary_sensor": {
-        "Status": { "value": "ON" }
+        "Status": { "value": "OFF" }
       },
       "sensor": {
         "Rf Level": {
