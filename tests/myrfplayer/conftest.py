@@ -21,6 +21,7 @@ from custom_components.myrfplayer.const import (
 )
 from custom_components.myrfplayer.rfplayerlib import RfPlayerClient, RfplayerProtocol
 from custom_components.myrfplayer.rfplayerlib.device import RfDeviceEvent
+from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import CONF_DEVICE, CONF_DEVICES
 from homeassistant.core import HomeAssistant
 
@@ -99,7 +100,7 @@ async def setup_rfplayer_test_cfg(
     automatic_add: bool = False,
     devices: dict[str, dict] | None = None,
     protocols: list[str] | None = None,
-):
+) -> ConfigEntry:
     """Construct a rfplayer config entry."""
     entry_data = create_rfplayer_test_cfg(
         device=device,

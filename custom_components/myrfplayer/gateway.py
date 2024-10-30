@@ -65,7 +65,6 @@ class Gateway:
         self.hass = hass
         self.entry = entry
         self.config = entry.data
-        self.device_ids: set[str] = set()
         self.device_registry = dr.async_get(hass)
         # All RfPlayer gateways are configured by default with a Jamming detector
         self.config[CONF_DEVICES].update({JAMMING_DEVICE_ID_STRING: JAMMING_DEVICE_INFO})
@@ -126,7 +125,7 @@ class Gateway:
 
         _LOGGER.debug("Received event from %s", event.device.id_string)
 
-        if event.id_string not in self.device_ids and self.config[CONF_AUTOMATIC_ADD]:
+        if event.id_string not in self.entry.data[CONF_DEVICES] and self.config[CONF_AUTOMATIC_ADD]:
             self._add_rf_device(event)
             # Still send event for group events
 
@@ -152,7 +151,6 @@ class Gateway:
         data[CONF_DEVICES] = copy.deepcopy(self.entry.data[CONF_DEVICES])
         data[CONF_DEVICES][event.device.id_string] = build_device_info_from_event(self.profile_registry, event)
         self.hass.config_entries.async_update_entry(entry=self.entry, data=data)
-        self.device_ids.add(event.device.id_string)
 
     @callback
     def _remove_rf_device(self, id_string: str) -> None:
@@ -165,7 +163,6 @@ class Gateway:
             },
         }
         self.hass.config_entries.async_update_entry(entry=self.entry, data=data)
-        self.device_ids.remove(id_string)
 
     @callback
     def _updated_rf_device(self, event: Event[EventDeviceRegistryUpdatedData]) -> None:
