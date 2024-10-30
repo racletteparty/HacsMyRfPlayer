@@ -21,10 +21,12 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: "3.12"
-          cache: "pip"
 
-      - name: "Install uv"
-        run: python3 -m pip install uv
+      - uses: astral-sh/setup-uv@v3
+        with:
+          enable-cache: true
+          cache-dependency-glob: |
+            **/pyproject.toml
 
       - name: "Lint & Format"
         run: |
