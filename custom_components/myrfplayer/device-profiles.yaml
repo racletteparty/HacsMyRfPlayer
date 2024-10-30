@@ -535,3 +535,27 @@
         unit: "dB"
         state:
           value_path: "$.frame.header.rfLevel"
+- name: Edisio Temperature Sensor
+  match:
+    info_type: "15"
+  platforms:
+    sensor:
+      - name: "Temperature"
+        device_class: temperature
+        unit: "°C"
+        state:
+          value_path: "$.frame.infos.add0"
+          factor: 0.01
+      - name: "Rf Level"
+        device_class: signal_strength
+        unit: "dB"
+        state:
+          value_path: "$.frame.header.rfLevel"
+      - name: "Battery Voltage"
+        device_class: voltage
+        unit: "V"
+        state:
+          value_path: "$.frame.infos.info"
+          bit_mask: 65280
+          bit_offset: 8
+          factor: 0.1
