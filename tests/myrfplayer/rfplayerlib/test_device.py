@@ -26,22 +26,32 @@ def test_raw_event_callback_blyss():
 
 
 def test_group_unit_code():
-    device = RfDeviceId(protocol="X2D", address="2095907073")
-    assert device.group_code == "130994192"
-    assert device.unit_code == "1"
-
-    device = RfDeviceId(protocol="CHACON", address="146139014")
-    assert device.group_code == "2283422"
-    assert device.unit_code == "6"
-
-    device = RfDeviceId(protocol="X10", address="123")
-    assert device.group_code == "7"
-    assert device.unit_code == "11"
-
-    device = RfDeviceId(protocol="RTS", address="123")
-    assert device.group_code == "7"
-    assert device.unit_code == "11"
-
-    device = RfDeviceId(protocol="VISIONIC", address="123")
+    device = RfDeviceId(protocol="X2D", address=str(0x7CED0101))
+    assert device.pairing_code == str(0x7CED010)
     assert device.group_code is None
-    assert device.unit_code == "123"
+    assert device.unit_code == str(0x1)
+
+    device = RfDeviceId(protocol="CHACON", address=str(0x304C9E87))
+    assert device.pairing_code == str(0xC1327A)
+    assert device.group_code == str(0x0)
+    assert device.unit_code == str(0x7)
+
+    device = RfDeviceId(protocol="X10", address=str(0x304C9E87))
+    assert device.pairing_code == str(0x304C9E)
+    assert device.group_code == str(0x8)
+    assert device.unit_code == str(0x7)
+
+    device = RfDeviceId(protocol="RTS", address=str(0x304C9E87))
+    assert device.pairing_code == str(0x304C9E)
+    assert device.group_code == str(0x8)
+    assert device.unit_code == str(0x7)
+
+    device = RfDeviceId(protocol="VISIONIC", address=str(0x304C9E87))
+    assert device.pairing_code == str(0x304C)
+    assert device.group_code == str(0x9E)
+    assert device.unit_code == str(0x87)
+
+    device = RfDeviceId(protocol="OREGON", address=str(0x304C9E87))
+    assert device.pairing_code == str(0x304C9E87)
+    assert device.group_code is None
+    assert device.unit_code == str(0x304C9E87)
