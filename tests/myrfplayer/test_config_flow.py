@@ -83,6 +83,7 @@ async def test_setup_serial(serial_connection_mock: Mock, hass: HomeAssistant) -
         "reconnect_interval": 10,
         "receiver_protocols": ["*"],
         "init_commands": None,
+        "verbose_mode": False,
         "devices": {},
         "redirect_address": {},
     }
@@ -108,6 +109,7 @@ async def test_setup_serial_simulator(serial_connection_mock: Mock, hass: HomeAs
         "reconnect_interval": 10,
         "receiver_protocols": ["*"],
         "init_commands": None,
+        "verbose_mode": False,
         "devices": {},
         "redirect_address": {},
     }
@@ -155,7 +157,13 @@ async def test_options_gateway(serial_connection_mock: Mock, hass: HomeAssistant
 
     result = await hass.config_entries.options.async_configure(
         result["flow_id"],
-        user_input={"automatic_add": True, "reconnect_interval": 20, "receiver_protocols": ["RTS"]},
+        user_input={
+            "automatic_add": True,
+            "reconnect_interval": 20,
+            "receiver_protocols": ["RTS"],
+            "init_commands": "",
+            "verbose_mode": True,
+        },
     )
 
     assert result["type"] is FlowResultType.CREATE_ENTRY
@@ -165,6 +173,7 @@ async def test_options_gateway(serial_connection_mock: Mock, hass: HomeAssistant
     assert entry.data["automatic_add"]
     assert entry.data["reconnect_interval"] == 20
     assert entry.data["receiver_protocols"] == ["RTS"]
+    assert entry.data["verbose_mode"] is True
 
 
 @pytest.mark.asyncio
@@ -191,7 +200,13 @@ async def test_options_gateway_no_receiver_protocols(serial_connection_mock: Moc
 
     result = await hass.config_entries.options.async_configure(
         result["flow_id"],
-        user_input={"automatic_add": False, "receiver_protocols": []},
+        user_input={
+            "automatic_add": False,
+            "reconnect_interval": 20,
+            "receiver_protocols": [],
+            "init_commands": "PING\nHELLO",
+            "verbose_mode": True,
+        },
     )
 
     assert result["type"] is FlowResultType.CREATE_ENTRY
@@ -227,7 +242,13 @@ async def test_options_gateway_init_commands(serial_connection_mock: Mock, hass:
 
     result = await hass.config_entries.options.async_configure(
         result["flow_id"],
-        user_input={"automatic_add": False, "init_commands": "PING\nHELLO"},
+        user_input={
+            "automatic_add": False,
+            "reconnect_interval": 20,
+            "receiver_protocols": ["RTS"],
+            "init_commands": "PING\nHELLO",
+            "verbose_mode": True,
+        },
     )
 
     assert result["type"] is FlowResultType.CREATE_ENTRY

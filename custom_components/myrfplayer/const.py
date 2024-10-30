@@ -1,6 +1,7 @@
 """Constants for MyRfPlayer integration."""
 
 CONF_RECONNECT_INTERVAL = "reconnect_interval"
+CONF_VERBOSE_MODE = "verbose_mode"
 
 DEFAULT_RECONNECT_INTERVAL = 10
 DEFAULT_RECEIVER_PROTOCOLS = ["*"]

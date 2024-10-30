@@ -2,6 +2,7 @@
 
 import asyncio
 import copy
+import json
 import logging
 from typing import cast
 
@@ -36,6 +37,7 @@ from .const import (
     CONF_RECEIVER_PROTOCOLS,
     CONF_RECONNECT_INTERVAL,
     CONF_REDIRECT_ADDRESS,
+    CONF_VERBOSE_MODE,
     CONNECTION_TIMEOUT,
     DOMAIN,
     RFPLAYER_CLIENT,
@@ -72,7 +74,8 @@ class Gateway:
     async def async_setup(self):
         """Load a RfPlayer gateway."""
 
-        self.profile_registry = await async_get_profile_registry(self.hass)
+        self.verbose = self.config.get(CONF_VERBOSE_MODE, False)
+        self.profile_registry = await async_get_profile_registry(self.hass, self.verbose)
 
         # Initialize library
         client = RfPlayerClient(
@@ -82,6 +85,7 @@ class Gateway:
             port=self.config[CONF_DEVICE],
             receiver_protocols=self.config[CONF_RECEIVER_PROTOCOLS],
             init_commands=self.config[CONF_INIT_COMMANDS],
+            verbose=self.verbose,
         )
         self.hass.data[DOMAIN][RFPLAYER_CLIENT] = client
 
@@ -124,14 +128,16 @@ class Gateway:
         """Event handler connected to the client."""
 
         _LOGGER.debug("Received event from %s", event.device.id_string)
+        if self.verbose:
+            _LOGGER.debug("Event data %s", json.dumps(event.data))
 
-        if event.id_string not in self.entry.data[CONF_DEVICES] and self.config[CONF_AUTOMATIC_ADD]:
+        if event.device.id_string not in self.entry.data[CONF_DEVICES] and self.config[CONF_AUTOMATIC_ADD]:
             self._add_rf_device(event)
             # Still send event for group events
 
         # Replace event address if device has redirect configuration
-        if event.id_string in self.config[CONF_REDIRECT_ADDRESS]:
-            redirected_id_string = self.config[CONF_REDIRECT_ADDRESS][event.id_string]
+        if event.device.id_string in self.config[CONF_REDIRECT_ADDRESS]:
+            redirected_id_string = self.config[CONF_REDIRECT_ADDRESS][event.device.id_string]
             event.device.address = self.config[CONF_DEVICES][redirected_id_string][CONF_ADDRESS]
 
         # Callback to HA registered components.
@@ -139,18 +145,22 @@ class Gateway:
 
     @callback
     def _add_rf_device(self, event: RfDeviceEvent) -> None:
-        _LOGGER.info(
-            "Added device %s (Proto: %s Addr: %s Model: %s)",
+        device_info = build_device_info_from_event(self.profile_registry, event)
+        if not device_info[CONF_PROFILE_NAME]:
+            _LOGGER.info("No matching profile for device %s", event.device.id_string)
+            return
+
+        data = self.entry.data.copy()
+        data[CONF_DEVICES] = copy.deepcopy(self.entry.data[CONF_DEVICES])
+        data[CONF_DEVICES][event.device.id_string] = device_info
+        self.hass.config_entries.async_update_entry(entry=self.entry, data=data)
+        _LOGGER.debug(
+            "Device %s added (Proto: %s Addr: %s Model: %s)",
             event.device.id_string,
             event.device.protocol,
             event.device.address,
             event.device.model,
         )
-
-        data = self.entry.data.copy()
-        data[CONF_DEVICES] = copy.deepcopy(self.entry.data[CONF_DEVICES])
-        data[CONF_DEVICES][event.device.id_string] = build_device_info_from_event(self.profile_registry, event)
-        self.hass.config_entries.async_update_entry(entry=self.entry, data=data)
 
     @callback
     def _remove_rf_device(self, id_string: str) -> None:
@@ -163,21 +173,30 @@ class Gateway:
             },
         }
         self.hass.config_entries.async_update_entry(entry=self.entry, data=data)
+        _LOGGER.debug(
+            "Device %s removed",
+            id_string,
+        )
 
     @callback
     def _updated_rf_device(self, event: Event[EventDeviceRegistryUpdatedData]) -> None:
         if event.data["action"] != "remove":
+            if self.verbose:
+                _LOGGER.debug("Doing nothing on action %s", event.data["action"])
             return
         device_entry = self.device_registry.deleted_devices[event.data[ATTR_DEVICE_ID]]
         if self.entry.entry_id not in device_entry.config_entries:
+            _LOGGER.debug("Entry id %s is not a deleted device", self.entry.entry_id)
             return
         id_string = get_device_id_string_from_identifiers(device_entry.identifiers)
         if id_string:
             self._remove_rf_device(id_string)
+        else:
+            _LOGGER.warning("Invalid device identifiers %s", device_entry.identifiers)
 
     async def _connect_gateway(self):
         """Set up connection and hook it into HA for reconnect/shutdown."""
-        _LOGGER.info("Initiating RFPlayer connection")
+        _LOGGER.debug("Initiating RFPlayer connection")
 
         client = self._get_client()
         try:
@@ -202,11 +221,15 @@ class Gateway:
         # mark entities as available
         async_dispatcher_send(self.hass, SIGNAL_RFPLAYER_AVAILABILITY, True)  # type: ignore[has-type]
 
-        _LOGGER.info("Connected to RfPlayer")
+        _LOGGER.debug("Connected to RfPlayer")
 
     @callback
-    def _reconnect_gateway(self, _: Exception | None = None) -> None:
+    def _reconnect_gateway(self, exc: Exception | None = None) -> None:
         """Schedule reconnect after connection has been unexpectedly lost."""
+        if exc:
+            _LOGGER.warning("Connection lost due to error %s", exc)
+        else:
+            _LOGGER.info("Connection explicitly closed")
 
         async_dispatcher_send(self.hass, SIGNAL_RFPLAYER_AVAILABILITY, False)  # type: ignore[has-type]
 

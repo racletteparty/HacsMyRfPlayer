@@ -98,6 +98,7 @@ class RfPlayerClient:
     baud: int = 115200
     receiver_protocols: list[str] | None = None
     init_commands: str | None = None
+    verbose: bool = False
     _protocol: RfplayerProtocol | None = None
     _adapter: RfDeviceEventAdapter | None = None
 
@@ -112,11 +113,11 @@ class RfPlayerClient:
 
         protocol_factory = partial(
             RfplayerProtocol,
-            id=self.port,
             loop=self.loop,
             event_callback=self._adapter.raw_event_callback,
             disconnect_callback=self._disconnect_callback_internal,
             init_script=self._init_script(),
+            verbose=self.verbose,
         )
         try:
             (_, protocol) = await create_serial_connection(self.loop, protocol_factory, self.port, self.baud)
