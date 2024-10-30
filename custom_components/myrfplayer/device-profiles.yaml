@@ -1,0 +1,537 @@
+- name: X10|DOMIA Switch
+  match:
+    protocol: "X10|DOMIA"
+    info_type: "0"
+  platforms:
+    switch:
+      - name: "On/Off"
+        status:
+          value_path: "$.frame.infos.subTypeMeaning"
+        cmd_turn_on: ON {protocol} ID {address}
+        cmd_turn_off: OFF {protocol} ID {address}
+    sensor:
+      - name: "Rf Level"
+        device_class: signal_strength
+        unit: "dB"
+        state:
+          value_path: "$.frame.header.rfLevel"
+- name: Jamming Detector
+  match:
+    protocol: "JAMMING"
+    info_type: "1"
+  platforms:
+    binary_sensor:
+      - name: "Detector"
+        device_class: problem
+        category: diagnostic
+        state:
+          value_path: "$.frame.infos.subType"
+- name: X10|CHACON|KD101|BLYSS|FS20 Switch
+  match:
+    protocol: "X10|CHACON|KD101|BLYSS|FS20"
+    info_type: "1"
+  platforms:
+    switch:
+      - name: "Switch"
+        status:
+          value_path: "$.frame.infos.subTypeMeaning"
+        cmd_turn_on: ON {protocol} ID {address}
+        cmd_turn_off: OFF {protocol} ID {address}
+    sensor:
+      - name: "Rf Level"
+        device_class: signal_strength
+        unit: "dB"
+        state:
+          value_path: "$.frame.header.rfLevel"
+- name: X10|CHACON|KD101|BLYSS|FS20 Lighting
+  match:
+    protocol: "X10|CHACON|KD101|BLYSS|FS20"
+    info_type: "1"
+  platforms:
+    light:
+      - name: "Light"
+        status:
+          value_path: "$.frame.infos.subTypeMeaning"
+        cmd_turn_on: ON {protocol} ID {address}
+        cmd_turn_off: OFF {protocol} ID {address}
+        cmd_set_level: DIM {protocol} ID {address} %{brightness}
+    sensor:
+      - name: "Rf Level"
+        device_class: signal_strength
+        unit: "dB"
+        state:
+          value_path: "$.frame.header.rfLevel"
+- name: X10|CHACON|KD101|BLYSS|FS20 On/Off
+  match:
+    protocol: "CHACON|KD101|BLYSS|FS20"
+    info_type: "1"
+  platforms:
+    binary_sensor:
+      - name: "Status"
+        state:
+          value_path: "$.frame.infos.subTypeMeaning"
+    sensor:
+      - name: "Rf Level"
+        device_class: signal_strength
+        unit: "dB"
+        state:
+          value_path: "$.frame.header.rfLevel"
+- name: X10|CHACON|KD101|BLYSS|FS20 Motion detector
+  match:
+    protocol: "CHACON|KD101|BLYSS|FS20"
+    info_type: "1"
+  platforms:
+    binary_sensor:
+      - name: "Motion"
+        device_class: motion
+        state:
+          value_path: "$.frame.infos.subTypeMeaning"
+    sensor:
+      - name: "Rf Level"
+        device_class: signal_strength
+        unit: "dB"
+        state:
+          value_path: "$.frame.header.rfLevel"
+- name: X10|CHACON|KD101|BLYSS|FS20 Smoke detector
+  match:
+    protocol: "CHACON|KD101|BLYSS|FS20"
+    info_type: "1"
+  platforms:
+    binary_sensor:
+      - name: "Smoke"
+        device_class: smoke
+        state:
+          value_path: "$.frame.infos.subTypeMeaning"
+    sensor:
+      - name: "Rf Level"
+        device_class: signal_strength
+        unit: "dB"
+        state:
+          value_path: "$.frame.header.rfLevel"
+- name: Visionic Sensor/Detector
+  match:
+    info_type: "2"
+    sub_type: "0"
+  platforms:
+    binary_sensor:
+      - name: "Tamper"
+        device_class: tamper
+        state:
+          value_path: "$.frame.infos.qualifier"
+          bit_mask: 1
+      - name: "Alarm"
+        device_class: safety
+        state:
+          value_path: "$.frame.infos.qualifier"
+          bit_mask: 2
+          bit_offset: 1
+      - name: "Low Battery"
+        device_class: battery
+        state:
+          value_path: "$.frame.infos.qualifier"
+          bit_mask: 4
+          bit_offset: 2
+      - name: "Supervisor Alive"
+        device_class: running
+        state:
+          value_path: "$.frame.infos.qualifier"
+          bit_mask: 8
+          bit_offset: 3
+    sensor:
+      - name: "Rf Level"
+        device_class: signal_strength
+        unit: "dB"
+        state:
+          value_path: "$.frame.header.rfLevel"
+- name: Visionic Remote
+  match:
+    info_type: "2"
+    sub_type: "1"
+  platforms:
+    binary_sensor:
+      - name: "Button 1"
+        state:
+          value_path: "$.frame.infos.qualifier"
+          bit_mask: 8
+          bit_offset: 3
+      - name: "Button 2"
+        state:
+          value_path: "$.frame.infos.qualifier"
+          bit_mask: 16
+          bit_offset: 4
+      - name: "Button 3"
+        state:
+          value_path: "$.frame.infos.qualifier"
+          bit_mask: 34
+          bit_offset: 5
+      - name: "Button 4"
+        state:
+          value_path: "$.frame.infos.qualifier"
+          bit_mask: 64
+          bit_offset: 6
+    sensor:
+      - name: "Rf Level"
+        device_class: signal_strength
+        unit: "dB"
+        state:
+          value_path: "$.frame.header.rfLevel"
+- name: RTS Shutter
+  match:
+    info_type: "3"
+    sub_type: "0"
+  platforms:
+    cover:
+      - name: Shutter
+        device_class: shutter
+        state:
+          value_path: "$.frame.infos.qualifier"
+          bit_mask: 15
+        states:
+          "1": closed
+          "4": open
+          "7": open
+        cmd_open: ON RTS ID {address} QUALIFIER 0
+        cmd_close: OFF RTS ID {address} QUALIFIER 0
+        cmd_stop: DIM RTS ID {address} %4
+    sensor:
+      - name: "Rf Level"
+        device_class: signal_strength
+        unit: "dB"
+        state:
+          value_path: "$.frame.header.rfLevel"
+- name: RTS Portal
+  match:
+    info_type: "3"
+    sub_type: "1"
+  platforms:
+    cover:
+      - name: Portal
+        device_class: gate
+        state:
+          value_path: "$.frame.infos.qualifier"
+          bit_mask: 15
+        states:
+          "1": closed
+          "4": open
+          "7": open
+        cmd_open: ON RTS ID {address} QUALIFIER 0
+        cmd_close: OFF RTS ID {address} QUALIFIER 0
+        cmd_stop: DIM RTS ID {address} %4
+    sensor:
+      - name: "Rf Level"
+        device_class: signal_strength
+        unit: "dB"
+        state:
+          value_path: "$.frame.header.rfLevel"
+- name: Oregon Temperature Sensor
+  match:
+    info_type: "4"
+    id_phy: "0x0|0x0000|0xEA4C"
+  platforms:
+    binary_sensor:
+      - name: "Low Battery"
+        device_class: battery
+        state:
+          value_path: "$.frame.infos.lowBatt"
+    sensor:
+      - name: "Temperature"
+        device_class: temperature
+        state:
+          value_path: "$.frame.infos.measures[?(@.type=='temperature')].value"
+          unit_path: "$.frame.infos.measures[?(@.type=='temperature')].unit"
+      - name: "Rf Level"
+        device_class: signal_strength
+        unit: "dB"
+        state:
+          value_path: "$.frame.header.rfLevel"
+- name: Oregon Temperature/Humidity Sensor
+  match:
+    info_type: "4"
+    id_phy: "0x1A2D|0xCA2C|0x0ACC|0x1A3D|0xFA28"
+  platforms:
+    binary_sensor:
+      - name: "Low Battery"
+        device_class: battery
+        state:
+          value_path: "$.frame.infos.lowBatt"
+    sensor:
+      - name: "Temperature"
+        device_class: temperature
+        state:
+          value_path: "$.frame.infos.measures[?(@.type=='temperature')].value"
+          unit_path: "$.frame.infos.measures[?(@.type=='temperature')].unit"
+      - name: "Humidity"
+        device_class: humidity
+        state:
+          value_path: "$.frame.infos.measures[?(@.type=='humidity')].value"
+          unit_path: "$.frame.infos.measures[?(@.type=='humidity')].unit"
+      - name: "Rf Level"
+        device_class: signal_strength
+        unit: "dB"
+        state:
+          value_path: "$.frame.header.rfLevel"
+- name: Oregon Pressure Sensor
+  match:
+    info_type: "5"
+  platforms:
+    binary_sensor:
+      - name: "Low Battery"
+        device_class: battery
+        state:
+          value_path: "$.frame.infos.lowBatt"
+    sensor:
+      - name: "Temperature"
+        device_class: temperature
+        state:
+          value_path: "$.frame.infos.measures[?(@.type=='temperature')].value"
+          unit_path: "$.frame.infos.measures[?(@.type=='temperature')].unit"
+      - name: "Humidity"
+        device_class: humidity
+        state:
+          value_path: "$.frame.infos.measures[?(@.type=='humidity')].value"
+          unit_path: "$.frame.infos.measures[?(@.type=='humidity')].unit"
+      - name: "Pressure"
+        device_class: pressure
+        state:
+          value_path: "$.frame.infos.measures[?(@.type=='pressure')].value"
+          unit_path: "$.frame.infos.measures[?(@.type=='pressure')].unit"
+      - name: "Rf Level"
+        device_class: signal_strength
+        unit: "dB"
+        state:
+          value_path: "$.frame.header.rfLevel"
+- name: Oregon Wind Sensor
+  match:
+    info_type: "6"
+  platforms:
+    binary_sensor:
+      - name: "Low Battery"
+        device_class: battery
+        state:
+          value_path: "$.frame.infos.lowBatt"
+    sensor:
+      - name: "Wind Speed"
+        device_class: wind_speed
+        state:
+          value_path: "$.frame.infos.measures[?(@.type=='wind speed')].value"
+          unit_path: "$.frame.infos.measures[?(@.type=='wind speed')].unit"
+      - name: "Direction"
+        state:
+          value_path: "$.frame.infos.measures[?(@.type=='direction')].value"
+          unit_path: "$.frame.infos.measures[?(@.type=='direction')].unit"
+      - name: "Rf Level"
+        device_class: signal_strength
+        unit: "dB"
+        state:
+          value_path: "$.frame.header.rfLevel"
+- name: Oregon UV Sensor
+  match:
+    info_type: "7"
+  platforms:
+    binary_sensor:
+      - name: "Low Battery"
+        device_class: battery
+        state:
+          value_path: "$.frame.infos.lowBatt"
+    sensor:
+      - name: "UV"
+        state:
+          value_path: "$.frame.infos.measures[?(@.type=='uv')].value"
+      - name: "Rf Level"
+        device_class: signal_strength
+        unit: "dB"
+        state:
+          value_path: "$.frame.header.rfLevel"
+- name: OWL Power Meter
+  match:
+    info_type: "8"
+  platforms:
+    binary_sensor:
+      - name: "Low Battery"
+        device_class: battery
+        state:
+          value_path: "$.frame.infos.lowBatt"
+    sensor:
+      - name: "Energy"
+        device_class: energy
+        state:
+          value_path: "$.frame.infos.measures[?(@.type=='energy')].value"
+          unit_path: "$.frame.infos.measures[?(@.type=='energy')].unit"
+      - name: "Power"
+        device_class: power
+        state:
+          value_path: "$.frame.infos.measures[?(@.type=='power')].value"
+          unit_path: "$.frame.infos.measures[?(@.type=='power')].unit"
+      - name: "Power Phase1"
+        device_class: power
+        state:
+          value_path: "$.frame.infos.measures[?(@.type=='P1')].value"
+          unit_path: "$.frame.infos.measures[?(@.type=='P1')].unit"
+      - name: "Power Phase2"
+        device_class: power
+        state:
+          value_path: "$.frame.infos.measures[?(@.type=='P2')].value"
+          unit_path: "$.frame.infos.measures[?(@.type=='P2')].unit"
+      - name: "Power Phase3"
+        device_class: power
+        state:
+          value_path: "$.frame.infos.measures[?(@.type=='P3')].value"
+          unit_path: "$.frame.infos.measures[?(@.type=='P3')].unit"
+      - name: "Rf Level"
+        device_class: signal_strength
+        unit: "dB"
+        state:
+          value_path: "$.frame.header.rfLevel"
+- name: Oregon Rain Sensor
+  match:
+    info_type: "9"
+  platforms:
+    binary_sensor:
+      - name: "Low Battery"
+        device_class: battery
+        state:
+          value_path: "$.frame.infos.lowBatt"
+    sensor:
+      - name: "Total Rain"
+        device_class: precipitation
+        state:
+          value_path: "$.frame.infos.measures[?(@.type=='total rain')].value"
+          unit_path: "$.frame.infos.measures[?(@.type=='total rain')].unit"
+      - name: "Current Rain"
+        device_class: precipitation_intensity
+        state:
+          value_path: "$.frame.infos.measures[?(@.type=='current rain')].value"
+          unit_path: "$.frame.infos.measures[?(@.type=='current rain')].unit"
+      - name: "Rf Level"
+        device_class: signal_strength
+        unit: "dB"
+        state:
+          value_path: "$.frame.header.rfLevel"
+- name: X2D Thermostat Elec
+  match:
+    info_type: "10"
+  platforms:
+    binary_sensor:
+      - name: "Anomaly"
+        device_class: problem
+        state:
+          value_path: "$.frame.infos.qualifier"
+          bit_mask: 2
+          bit_offset: 1
+    sensor:
+      - name: "Rf Level"
+        device_class: signal_strength
+        unit: "dB"
+        state:
+          value_path: "$.frame.header.rfLevel"
+    climate:
+      - name: "Thermostat"
+        event_code:
+          value_path: "$.frame.infos.function"
+        event_types:
+          "1": state
+          "2": preset_mode
+        state:
+          value_path: "$.frame.infos.state"
+        preset_mode:
+          value_path: "$.frame.infos.state"
+        preset_modes:
+          0: Eco
+          3: Comfort
+          4: Stop
+          5: Out of frost
+          7: Auto
+        cmd_turn_on: ON X2DELEC A{group_code} %{preset_mode}
+        cmd_turn_off: OFF X2DELEC A{group_code} %{preset_mode}
+        cmd_set_mode: ON X2DELEC A{group_code} %{preset_mode}
+- name: X2D Thermostat Gas
+  match:
+    info_type: "10"
+  platforms:
+    binary_sensor:
+      - name: "Anomaly"
+        device_class: problem
+        state:
+          value_path: "$.frame.infos.qualifier"
+          bit_mask: 2
+          bit_offset: 1
+    sensor:
+      - name: "Rf Level"
+        device_class: signal_strength
+        unit: "dB"
+        state:
+          value_path: "$.frame.header.rfLevel"
+    climate:
+      - name: "Thermostat"
+        event_code:
+          value_path: "$.frame.infos.function"
+        event_types:
+          "1": state
+          "2": preset_mode
+          "12": state
+          "26": state
+        state:
+          value_path: "$.frame.infos.state"
+        preset_mode:
+          value_path: "$.frame.infos.state"
+        preset_modes:
+          "0": Eco
+          "3": Comfort
+          "4": Stop
+          "5": Out of frost
+          "7": Auto
+        cmd_turn_on: ON X2DELEC A{group_code} %{preset_mode}
+        cmd_turn_off: OFF X2DELEC A{group_code} %{preset_mode}
+        cmd_set_mode: ON X2DELEC A{group_code} %{preset_mode}
+- name: X2D Detector/Sensor
+  match:
+    info_type: "11"
+    sub_type: "0"
+  platforms:
+    binary_sensor:
+      - name: "Tamper"
+        device_class: tamper
+        state:
+          value_path: "$.frame.infos.qualifier"
+          bit_mask: 1
+          bit_offset: 0
+      - name: "Alarm"
+        device_class: safety
+        state:
+          value_path: "$.frame.infos.qualifier"
+          bit_mask: 2
+          bit_offset: 1
+      - name: "Low Battery"
+        device_class: battery
+        state:
+          value_path: "$.frame.infos.qualifier"
+          bit_mask: 4
+          bit_offset: 2
+    sensor:
+      - name: "Rf Level"
+        device_class: signal_strength
+        unit: "dB"
+        state:
+          value_path: "$.frame.header.rfLevel"
+- name: X2D Shutter
+  match:
+    info_type: "11"
+    sub_type: "1"
+  platforms:
+    cover:
+      - name: Shutter
+        device_class: shutter
+        state:
+          value_path: "$.frame.infos.qualifier"
+        states:
+          "1": open
+          "2": closed
+          "3": open
+        cmd_open: ON X2DSHUTTER {address}
+        cmd_close: OFF X2DSHUTTER {address}
+    sensor:
+      - name: "Rf Level"
+        device_class: signal_strength
+        unit: "dB"
+        state:
+          value_path: "$.frame.header.rfLevel"
