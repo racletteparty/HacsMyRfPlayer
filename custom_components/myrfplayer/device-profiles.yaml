@@ -123,8 +123,9 @@
         unit: "dB"
         state:
           value_path: "$.frame.header.rfLevel"
-- name: Visionic Sensor/Detector
+- name: Visonic Sensor/Detector
   match:
+    protocol: VISONIC
     info_type: "2"
     sub_type: "0"
   platforms:
@@ -160,6 +161,7 @@
           value_path: "$.frame.header.rfLevel"
 - name: Visionic Remote
   match:
+    protocol: VISIONIC
     info_type: "2"
     sub_type: "1"
   platforms:
@@ -192,6 +194,7 @@
           value_path: "$.frame.header.rfLevel"
 - name: RTS Shutter
   match:
+    protocol: RTS
     info_type: "3"
     sub_type: "0"
   platforms:
@@ -216,6 +219,7 @@
           value_path: "$.frame.header.rfLevel"
 - name: RTS Portal
   match:
+    protocol: RTS
     info_type: "3"
     sub_type: "1"
   platforms:
@@ -240,6 +244,7 @@
           value_path: "$.frame.header.rfLevel"
 - name: Oregon Temperature Sensor
   match:
+    protocol: OREGON
     info_type: "4"
     id_phy: "0x0|0x0000|0xEA4C|0xCA48"
   platforms:
@@ -261,6 +266,7 @@
           value_path: "$.frame.header.rfLevel"
 - name: Oregon Temperature/Humidity Sensor
   match:
+    protocol: OREGON
     info_type: "4"
     id_phy: "0x1A2D|0xCA2C|0x0ACC|0x1A3D|0xFA28"
   platforms:
@@ -287,6 +293,7 @@
           value_path: "$.frame.header.rfLevel"
 - name: Oregon Pressure Sensor
   match:
+    protocol: OREGON
     info_type: "5"
   platforms:
     binary_sensor:
@@ -317,6 +324,7 @@
           value_path: "$.frame.header.rfLevel"
 - name: Oregon Wind Sensor
   match:
+    protocol: OREGON
     info_type: "6"
   platforms:
     binary_sensor:
@@ -341,6 +349,7 @@
           value_path: "$.frame.header.rfLevel"
 - name: Oregon UV Sensor
   match:
+    protocol: OREGON
     info_type: "7"
   platforms:
     binary_sensor:
@@ -359,6 +368,7 @@
           value_path: "$.frame.header.rfLevel"
 - name: OWL Power Meter
   match:
+    protocol: OWL
     info_type: "8"
   platforms:
     binary_sensor:
@@ -399,6 +409,7 @@
           value_path: "$.frame.header.rfLevel"
 - name: Oregon Rain Sensor
   match:
+    protocol: OREGON
     info_type: "9"
   platforms:
     binary_sensor:
@@ -424,6 +435,7 @@
           value_path: "$.frame.header.rfLevel"
 - name: X2D Thermostat Elec
   match:
+    protocol: X2D
     info_type: "10"
   platforms:
     binary_sensor:
@@ -461,6 +473,7 @@
         cmd_set_mode: ON X2DELEC ID {unit_code} %{preset_mode}
 - name: X2D Thermostat Gas
   match:
+    protocol: X2D
     info_type: "10"
   platforms:
     binary_sensor:
@@ -500,6 +513,7 @@
         cmd_set_mode: ON X2DELEC ID {unit_code} %{preset_mode}
 - name: X2D Detector/Sensor
   match:
+    protocol: X2D
     info_type: "11"
     sub_type: "0"
   platforms:
@@ -530,6 +544,7 @@
           value_path: "$.frame.header.rfLevel"
 - name: X2D Shutter
   match:
+    protocol: X2D
     info_type: "11"
     sub_type: "1"
   platforms:
@@ -552,6 +567,7 @@
           value_path: "$.frame.header.rfLevel"
 - name: Edisio Temperature Sensor
   match:
+    protocol: EDISIO
     info_type: "15"
   platforms:
     sensor:

@@ -22,6 +22,7 @@ from homeassistant.data_entry_flow import FlowResultType
 from homeassistant.helpers import device_registry as dr
 from tests.myrfplayer.conftest import create_rfplayer_test_cfg
 from tests.myrfplayer.constants import (
+    CHACON_BINARY_SENSOR_DEVICE_INFO,
     OREGON_ADDRESS,
     OREGON_BINARY_SENSOR_ENTITY_ID,
     OREGON_BINARY_SENSOR_FRIENDLY_NAME,
@@ -300,6 +301,38 @@ async def test_options_add_rf_device(serial_connection_mock: Mock, hass: HomeAss
     assert state
     assert state.state == STATE_UNKNOWN
     assert state.attributes.get("friendly_name") == OREGON_BINARY_SENSOR_FRIENDLY_NAME
+
+
+@pytest.mark.asyncio
+async def test_options_add_rf_device_bad_protocol(serial_connection_mock: Mock, hass: HomeAssistant) -> None:
+    """Test we can add a device."""
+
+    entry = MockConfigEntry(
+        domain=DOMAIN,
+        data=create_rfplayer_test_cfg(),
+        unique_id=DOMAIN,
+    )
+    result = await start_options_flow(hass, entry)
+
+    assert result["type"] is FlowResultType.MENU
+    assert result["step_id"] == "init"
+
+    result = await hass.config_entries.options.async_configure(
+        result["flow_id"],
+        user_input={"next_step_id": "add_rf_device"},
+    )
+
+    assert result["type"] is FlowResultType.FORM
+    assert result["step_id"] == "add_rf_device"
+
+    device_options = OREGON_DEVICE_INFO.copy()
+    device_options.update({"profile_name": CHACON_BINARY_SENSOR_DEVICE_INFO["profile_name"]})
+    result = await hass.config_entries.options.async_configure(
+        result["flow_id"],
+        user_input=device_options,
+    )
+
+    assert result["errors"] == {"protocol": "incompatible_protocol"}
 
 
 @pytest.mark.asyncio

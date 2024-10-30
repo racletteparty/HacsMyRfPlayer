@@ -12,8 +12,8 @@
     },
     "error": {},
     "abort": {
-      "single_instance_allowed": "[%key:common::config_flow::abort::single_instance_allowed%]",
-      "unknown": "[%key:common::config_flow::error::unknown%]"
+      "single_instance_allowed": "Already configured. Only a single configuration possible.",
+      "unknown": "Unexpected error"
     }
   },
   "options": {
@@ -43,6 +43,9 @@
           "redirect_address": "Redirect address"
         }
       }
+    },
+    "error": {
+      "incompatible_protocol": "Procotol and device profile are incompatible"
     }
   },
   "services": {
