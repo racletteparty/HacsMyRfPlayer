@@ -226,7 +226,7 @@ class RfpPlatformConfigMap(BaseModel):
 class RfPDeviceMatch(BaseModel):
     """Frame matching rule to detect device."""
 
-    protocol: str | None
+    protocol: str
     info_type: str
     sub_type: str | None
     id_phy: str | None
@@ -272,17 +272,9 @@ class ProfileRegistry:
         """Get a plaform config matching an event."""
         platform_config: list[AnyRfpPlatformConfig] = []
 
-        if not profile_name:
-            _LOGGER.warning("No profile name provided")
-            return platform_config
+        profile = self._get_profile(profile_name)
 
-        matching_profiles = (entry for entry in self._registry if entry.name == profile_name)
-
-        profile = next(matching_profiles, None)
-
-        if not profile:
-            _LOGGER.warning("Profile name %s not supported", profile_name)
-        else:
+        if profile:
             platform_config = profile.platforms.get(platform)
             if not platform_config:
                 self._verbose_debug("Platform %s not supported by profile %s", platform, profile.name)
@@ -292,6 +284,29 @@ class ProfileRegistry:
     def get_profile_names(self) -> list[str]:
         """Get the list of available profile names."""
         return [item.name for item in self._registry]
+
+    def is_valid_protocol(self, profile_name: str, protocol: str) -> bool:
+        """Check if a protocol is valid for the given profile."""
+        profile = self._get_profile(profile_name)
+
+        if profile is None:
+            return False
+
+        return re.match(profile.match.protocol, protocol) is not None
+
+    def _get_profile(self, profile_name: str | None) -> RfpDeviceProfile | None:
+        if not profile_name:
+            _LOGGER.warning("No profile name provided")
+            return None
+
+        matching_profiles = (entry for entry in self._registry if entry.name == profile_name)
+
+        profile = next(matching_profiles, None)
+
+        if not profile:
+            _LOGGER.warning("Profile name %s not supported", profile_name)
+            return None
+        return profile
 
     def _event_is_matching(self, event_data: RfPlayerEventData, profile: RfpDeviceProfile):
         m = profile.match

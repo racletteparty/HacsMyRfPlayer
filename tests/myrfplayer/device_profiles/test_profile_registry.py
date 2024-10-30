@@ -134,3 +134,11 @@ def test_switch(profile: str, switch_expectation: FrameExpectation):
         assert isinstance(item, RfpSwitchConfig)
         assert isinstance(test, StateTest)
         assert item.status.get_value(event) == test.state, f"{name} value"
+
+
+def test_is_valid_protocol():
+    assert REGISTRY.is_valid_protocol("Oregon Temperature Sensor", "CHACON") is False
+    assert REGISTRY.is_valid_protocol("Oregon Temperature Sensor", "OREGON") is True
+
+    assert REGISTRY.is_valid_protocol("X10|CHACON|KD101|BLYSS|FS20 On/Off", "OREGON") is False
+    assert REGISTRY.is_valid_protocol("X10|CHACON|KD101|BLYSS|FS20 On/Off", "CHACON") is True

@@ -181,6 +181,9 @@ class RfPlayerOptionsFlowHandler(OptionsFlow):
 
     async def async_step_add_rf_device(self, user_input: dict[str, Any] | None = None) -> ConfigFlowResult:
         """Add manuall a RF device."""
+        errors: dict[str, Any] = {}
+
+        profile_registry = await async_get_profile_registry(self.hass, False)
 
         if user_input is not None:
             # New device
@@ -189,12 +192,15 @@ class RfPlayerOptionsFlowHandler(OptionsFlow):
             device_info = user_input.copy()
             device_info[CONF_REDIRECT_ADDRESS] = None
 
-            self.update_config_data(devices={id_string: device_info})
+            if not profile_registry.is_valid_protocol(user_input[CONF_PROFILE_NAME], user_input[CONF_PROTOCOL]):
+                errors.update({CONF_PROTOCOL: "incompatible_protocol"})
 
-            return self.async_create_entry(title="", data={})
+            if not errors:
+                self.update_config_data(devices={id_string: device_info})
+
+                return self.async_create_entry(title="", data={})
 
         data = self.config_entry.data
-        profile_registry = await async_get_profile_registry(self.hass, False)
 
         # New device
         option_schema = {
@@ -205,10 +211,7 @@ class RfPlayerOptionsFlowHandler(OptionsFlow):
             ),
         }
 
-        return self.async_show_form(
-            step_id="add_rf_device",
-            data_schema=vol.Schema(option_schema),
-        )
+        return self.async_show_form(step_id="add_rf_device", data_schema=vol.Schema(option_schema), errors=errors)
 
     @callback
     def update_config_data(
