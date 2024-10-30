@@ -23,11 +23,13 @@ from homeassistant.helpers.dispatcher import async_dispatcher_connect
 from homeassistant.setup import async_setup_component
 from tests.myrfplayer.constants import (
     BLYSS_ADDRESS,
+    BLYSS_ID_STRING,
     BLYSS_OFF_EVENT_DATA,
     JAMMING_BINARY_SENSOR_ENTITY_ID,
     JAMMING_ID_STRING,
     OREGON_ADDRESS,
     OREGON_EVENT_DATA,
+    OREGON_ID_STRING,
     SOME_PROTOCOLS,
 )
 
@@ -41,7 +43,7 @@ async def test_fire_event(
     device_registry: dr.DeviceRegistry,
 ) -> None:
     """Test fire event."""
-    await setup_rfplayer_test_cfg(hass, device="/dev/serial/by-id/usb-rfplayer-port0", automatic_add=True)
+    entry = await setup_rfplayer_test_cfg(hass, device="/dev/serial/by-id/usb-rfplayer-port0", automatic_add=True)
 
     calls: list[RfDeviceEvent] = []
 
@@ -68,25 +70,37 @@ async def test_fire_event(
         )
     )
 
+    client.event_callback(
+        RfDeviceEvent(
+            device=RfDeviceId(protocol="BLYSS", address=BLYSS_ADDRESS),
+            data=RfPlayerEventData(BLYSS_OFF_EVENT_DATA),
+        )
+    )
+
+    # Ensure blyss is not duplicated
+    device_entries = dr.async_entries_for_config_entry(device_registry, entry.entry_id)
+    assert len(device_entries) == 3
+
     device_jamming = device_registry.async_get_device(identifiers={(DOMAIN, "JAMMING-0")})
     assert device_jamming is not None
     assert device_jamming.manufacturer == "JAMMING"
     assert device_jamming.name == "JAMMING 0"
 
-    device_oregon = device_registry.async_get_device(identifiers={(DOMAIN, f"OREGON-{OREGON_ADDRESS}")})
+    device_oregon = device_registry.async_get_device(identifiers={(DOMAIN, OREGON_ID_STRING)})
     assert device_oregon is not None
     assert device_oregon.model == "PCR800"
     assert device_oregon.manufacturer == "OREGON"
     assert device_oregon.name == f"OREGON PCR800 {OREGON_ADDRESS}"
 
-    device_blyss = device_registry.async_get_device(identifiers={(DOMAIN, f"BLYSS-{BLYSS_ADDRESS}")})
+    device_blyss = device_registry.async_get_device(identifiers={(DOMAIN, BLYSS_ID_STRING)})
     assert device_blyss is not None
     assert device_blyss.model is None
     assert device_blyss.manufacturer == "BLYSS"
     assert device_blyss.name == f"BLYSS {BLYSS_ADDRESS}"
 
-    assert calls[0].device.id_string == f"OREGON-{OREGON_ADDRESS}"
-    assert calls[1].device.id_string == f"BLYSS-{BLYSS_ADDRESS}"
+    assert calls[0].device.id_string == OREGON_ID_STRING
+    assert calls[1].device.id_string == BLYSS_ID_STRING
+    assert calls[2].device.id_string == BLYSS_ID_STRING
 
 
 @pytest.mark.asyncio
@@ -131,7 +145,7 @@ async def test_simulate_event(
 
     await hass.services.async_call("myrfplayer", "simulate_event", {"event_data": OREGON_EVENT_DATA}, blocking=True)
 
-    device_oregon = device_registry.async_get_device(identifiers={(DOMAIN, f"OREGON-{OREGON_ADDRESS}")})
+    device_oregon = device_registry.async_get_device(identifiers={(DOMAIN, OREGON_ID_STRING)})
     assert device_oregon is not None
     assert device_oregon.model == "PCR800"
     assert device_oregon.manufacturer == "OREGON"
@@ -148,11 +162,10 @@ async def test_ws_device_remove(
     """Test removing a device through device registry."""
     assert await async_setup_component(hass, "config", {})
 
-    id_string = f"BLYSS-{BLYSS_ADDRESS}"
     mock_entry = await setup_rfplayer_test_cfg(
         hass,
         devices={
-            id_string: {
+            BLYSS_ID_STRING: {
                 "protocol": "BLYSS",
                 "address": BLYSS_ADDRESS,
                 "profile_name": "X10|CHACON|KD101|BLYSS|FS20 On/Off",
@@ -161,7 +174,7 @@ async def test_ws_device_remove(
         },
     )
 
-    device_entry = device_registry.async_get_device(identifiers={("myrfplayer", id_string)})
+    device_entry = device_registry.async_get_device(identifiers={("myrfplayer", BLYSS_ID_STRING)})
     assert device_entry
 
     # Ask to remove existing device
@@ -170,7 +183,7 @@ async def test_ws_device_remove(
     assert response["success"]
 
     # Verify device entry is removed
-    assert device_registry.async_get_device(identifiers={("myrfplayer", id_string)}) is None
+    assert device_registry.async_get_device(identifiers={("myrfplayer", BLYSS_ID_STRING)}) is None
 
     # Verify that the config entry has removed the device
     assert len(mock_entry.data["devices"]) == 1
