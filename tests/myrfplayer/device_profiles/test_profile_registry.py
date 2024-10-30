@@ -20,7 +20,7 @@ def _get_config(all_config: list[AnyRfpPlatformConfig], name: str) -> AnyRfpPlat
     return named_config
 
 
-REGISTRY = _get_profile_registry()
+REGISTRY = _get_profile_registry(verbose=True)
 
 
 def _get_platform_tests(
