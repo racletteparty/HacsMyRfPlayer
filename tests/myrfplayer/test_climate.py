@@ -28,7 +28,6 @@ from homeassistant.core import HomeAssistant, State
 from tests.myrfplayer.conftest import create_rfplayer_test_cfg, setup_rfplayer_test_cfg
 from tests.myrfplayer.constants import (
     X2D_ADDRESS,
-    X2D_AREA,
     X2D_COMFORT_EVENT_DATA,
     X2D_DEVICE_INFO,
     X2D_ENTITY_ID,
@@ -36,6 +35,7 @@ from tests.myrfplayer.constants import (
     X2D_ID_STRING,
     X2D_ON_EVENT_DATA,
     X2D_PRESET_MODE,
+    X2D_UNIT_CODE,
 )
 
 
@@ -73,7 +73,7 @@ async def test_climate(serial_connection_mock: Mock, hass: HomeAssistant, test_p
     assert state
     assert state.state == STATE_OFF
     assert state.attributes[ATTR_PRESET_MODE] is None
-    tr.write.assert_called_once_with(f"ZIA++OFF X2DELEC A{X2D_AREA} %0\n\r".encode())
+    tr.write.assert_called_once_with(f"ZIA++OFF X2DELEC ID {X2D_UNIT_CODE} %0\n\r".encode())
     tr.write.reset_mock()
 
     await hass.services.async_call(
@@ -87,7 +87,7 @@ async def test_climate(serial_connection_mock: Mock, hass: HomeAssistant, test_p
     assert state
     assert state.state == HVACMode.HEAT
     assert state.attributes.get(ATTR_PRESET_MODE) is None
-    tr.write.assert_called_once_with(f"ZIA++ON X2DELEC A{X2D_AREA} %0\n\r".encode())
+    tr.write.assert_called_once_with(f"ZIA++ON X2DELEC ID {X2D_UNIT_CODE} %0\n\r".encode())
     tr.write.reset_mock()
 
     await hass.services.async_call(
@@ -100,7 +100,7 @@ async def test_climate(serial_connection_mock: Mock, hass: HomeAssistant, test_p
     state = hass.states.get(X2D_ENTITY_ID)
     assert state
     assert state.state == STATE_OFF
-    tr.write.assert_called_once_with(f"ZIA++OFF X2DELEC A{X2D_AREA} %0\n\r".encode())
+    tr.write.assert_called_once_with(f"ZIA++OFF X2DELEC ID {X2D_UNIT_CODE} %0\n\r".encode())
     tr.write.reset_mock()
 
     await hass.services.async_call(
@@ -114,7 +114,7 @@ async def test_climate(serial_connection_mock: Mock, hass: HomeAssistant, test_p
     assert state
     assert state.state == STATE_OFF
     assert state.attributes[ATTR_PRESET_MODE] == "Comfort"
-    tr.write.assert_called_once_with(f"ZIA++ON X2DELEC A{X2D_AREA} %3\n\r".encode())
+    tr.write.assert_called_once_with(f"ZIA++ON X2DELEC ID {X2D_UNIT_CODE} %3\n\r".encode())
 
 
 @pytest.mark.asyncio

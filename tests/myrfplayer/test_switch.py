@@ -7,6 +7,7 @@ from pytest_homeassistant_custom_component.common import MockConfigEntry, mock_r
 from pytest_mock import MockerFixture
 
 from custom_components.myrfplayer.const import ATTR_EVENT_DATA, DOMAIN, RFPLAYER_CLIENT
+from custom_components.myrfplayer.device_profiles import _get_profile_registry
 from custom_components.myrfplayer.rfplayerlib import RfPlayerClient
 from custom_components.myrfplayer.rfplayerlib.device import RfDeviceEvent, RfDeviceId
 from custom_components.myrfplayer.rfplayerlib.protocol import RfPlayerEventData, RfplayerProtocol
@@ -29,6 +30,7 @@ from tests.myrfplayer.constants import (
     CHACON_SWITCH_DEVICE_INFO,
     CHACON_SWITCH_ENTITY_ID,
     CHACON_SWITCH_FRIENDLY_NAME,
+    CHACON_UNIT_CODE,
 )
 
 
@@ -65,7 +67,7 @@ async def test_switch(serial_connection_mock: Mock, hass: HomeAssistant, test_pr
     state = hass.states.get(CHACON_SWITCH_ENTITY_ID)
     assert state
     assert state.state == STATE_ON
-    tr.write.assert_called_once_with(bytearray(f"ZIA++ON CHACON ID {CHACON_ADDRESS}\n\r".encode()))
+    tr.write.assert_called_once_with(bytearray(f"ZIA++ON CHACON ID {CHACON_UNIT_CODE}\n\r".encode()))
     tr.write.reset_mock()
 
     await hass.services.async_call(
@@ -78,12 +80,17 @@ async def test_switch(serial_connection_mock: Mock, hass: HomeAssistant, test_pr
     state = hass.states.get(CHACON_SWITCH_ENTITY_ID)
     assert state
     assert state.state == STATE_OFF
-    tr.write.assert_called_once_with(bytearray(f"ZIA++OFF CHACON ID {CHACON_ADDRESS}\n\r".encode()))
+    tr.write.assert_called_once_with(bytearray(f"ZIA++OFF CHACON ID {CHACON_UNIT_CODE}\n\r".encode()))
 
 
 @pytest.mark.asyncio
 async def test_automatic_add(serial_connection_mock: Mock, hass: HomeAssistant, mocker: MockerFixture):
     await setup_rfplayer_test_cfg(hass, device="/dev/serial/by-id/usb-rfplayer-port0", automatic_add=True)
+
+    # Force profile cause there is no first match for lighting devices for now
+    mocker.patch.object(
+        _get_profile_registry(), "get_profile_name_from_event", return_value="X10|CHACON|KD101|BLYSS|FS20 Switch"
+    )
 
     client = cast(RfPlayerClient, hass.data[DOMAIN][RFPLAYER_CLIENT])
     client.event_callback(

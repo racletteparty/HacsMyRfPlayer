@@ -80,7 +80,7 @@ class MyRfPlayerLight(RfDeviceEntity, LightEntity):
         self._event_data = event_data
 
     async def async_added_to_hass(self) -> None:
-        """Restore light device state (ON/OFF)."""
+        """Restore light device state (On/Off)."""
         await super().async_added_to_hass()
 
         if self._event_data is None:

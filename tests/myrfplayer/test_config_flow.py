@@ -15,6 +15,7 @@ from custom_components.myrfplayer.rfplayerlib import RfPlayerClient
 from custom_components.myrfplayer.rfplayerlib.device import RfDeviceEvent, RfDeviceId
 from custom_components.myrfplayer.rfplayerlib.protocol import RfPlayerEventData
 from homeassistant import config_entries
+from homeassistant.config_entries import ConfigFlowResult
 from homeassistant.const import STATE_OFF, STATE_UNKNOWN
 from homeassistant.core import HomeAssistant
 from homeassistant.data_entry_flow import FlowResultType
@@ -44,7 +45,7 @@ def com_port():
     return port
 
 
-async def start_options_flow(hass: HomeAssistant, entry: MockConfigEntry):
+async def start_options_flow(hass: HomeAssistant, entry: MockConfigEntry) -> ConfigFlowResult:
     """Start the options flow with the entry under test."""
     entry.add_to_hass(hass)
 
@@ -113,7 +114,25 @@ async def test_setup_serial_simulator(serial_connection_mock: Mock, hass: HomeAs
 
 
 @pytest.mark.asyncio
-async def test_options_global(serial_connection_mock: Mock, hass: HomeAssistant) -> None:
+async def test_setup_duplicate(serial_connection_mock: Mock, hass: HomeAssistant) -> None:
+    result = await hass.config_entries.flow.async_init(DOMAIN, context={"source": config_entries.SOURCE_USER})
+
+    assert result["type"] is FlowResultType.FORM
+    assert result["step_id"] == "user"
+    assert result["errors"] == {}
+
+    with patch("custom_components.myrfplayer.async_setup_entry", return_value=True):
+        result = await hass.config_entries.flow.async_configure(result["flow_id"], {"device_simulator": True})
+
+    assert result["type"] is FlowResultType.CREATE_ENTRY
+
+    result = await hass.config_entries.flow.async_init(DOMAIN, context={"source": config_entries.SOURCE_USER})
+    assert result["type"] is FlowResultType.ABORT
+    assert result["reason"] == "single_instance_allowed"
+
+
+@pytest.mark.asyncio
+async def test_options_gateway(serial_connection_mock: Mock, hass: HomeAssistant) -> None:
     """Test if we can set global options."""
 
     entry = MockConfigEntry(
@@ -123,8 +142,16 @@ async def test_options_global(serial_connection_mock: Mock, hass: HomeAssistant)
     )
     result = await start_options_flow(hass, entry)
 
+    assert result["type"] is FlowResultType.MENU
+    assert result["step_id"] == "init"
+
+    result = await hass.config_entries.options.async_configure(
+        result["flow_id"],
+        user_input={"next_step_id": "configure_gateway"},
+    )
+
     assert result["type"] is FlowResultType.FORM
-    assert result["step_id"] == "gateway_options"
+    assert result["step_id"] == "configure_gateway"
 
     result = await hass.config_entries.options.async_configure(
         result["flow_id"],
@@ -141,7 +168,7 @@ async def test_options_global(serial_connection_mock: Mock, hass: HomeAssistant)
 
 
 @pytest.mark.asyncio
-async def test_no_receiver_protocols(serial_connection_mock: Mock, hass: HomeAssistant) -> None:
+async def test_options_gateway_no_receiver_protocols(serial_connection_mock: Mock, hass: HomeAssistant) -> None:
     """Test we set protocols to None if none are selected."""
 
     entry = MockConfigEntry(
@@ -151,8 +178,16 @@ async def test_no_receiver_protocols(serial_connection_mock: Mock, hass: HomeAss
     )
     result = await start_options_flow(hass, entry)
 
+    assert result["type"] is FlowResultType.MENU
+    assert result["step_id"] == "init"
+
+    result = await hass.config_entries.options.async_configure(
+        result["flow_id"],
+        user_input={"next_step_id": "configure_gateway"},
+    )
+
     assert result["type"] is FlowResultType.FORM
-    assert result["step_id"] == "gateway_options"
+    assert result["step_id"] == "configure_gateway"
 
     result = await hass.config_entries.options.async_configure(
         result["flow_id"],
@@ -169,7 +204,7 @@ async def test_no_receiver_protocols(serial_connection_mock: Mock, hass: HomeAss
 
 
 @pytest.mark.asyncio
-async def test_init_commands(serial_connection_mock: Mock, hass: HomeAssistant) -> None:
+async def test_options_gateway_init_commands(serial_connection_mock: Mock, hass: HomeAssistant) -> None:
     """Test we set protocols to None if none are selected."""
 
     entry = MockConfigEntry(
@@ -179,8 +214,16 @@ async def test_init_commands(serial_connection_mock: Mock, hass: HomeAssistant) 
     )
     result = await start_options_flow(hass, entry)
 
+    assert result["type"] is FlowResultType.MENU
+    assert result["step_id"] == "init"
+
+    result = await hass.config_entries.options.async_configure(
+        result["flow_id"],
+        user_input={"next_step_id": "configure_gateway"},
+    )
+
     assert result["type"] is FlowResultType.FORM
-    assert result["step_id"] == "gateway_options"
+    assert result["step_id"] == "configure_gateway"
 
     result = await hass.config_entries.options.async_configure(
         result["flow_id"],
@@ -195,7 +238,7 @@ async def test_init_commands(serial_connection_mock: Mock, hass: HomeAssistant) 
 
 
 @pytest.mark.asyncio
-async def test_options_add_device(serial_connection_mock: Mock, hass: HomeAssistant) -> None:
+async def test_options_add_rf_device(serial_connection_mock: Mock, hass: HomeAssistant) -> None:
     """Test we can add a device."""
 
     entry = MockConfigEntry(
@@ -205,12 +248,12 @@ async def test_options_add_device(serial_connection_mock: Mock, hass: HomeAssist
     )
     result = await start_options_flow(hass, entry)
 
-    assert result["type"] is FlowResultType.FORM
-    assert result["step_id"] == "gateway_options"
+    assert result["type"] is FlowResultType.MENU
+    assert result["step_id"] == "init"
 
     result = await hass.config_entries.options.async_configure(
         result["flow_id"],
-        user_input={"automatic_add": True, "add_device": True},
+        user_input={"next_step_id": "add_rf_device"},
     )
 
     assert result["type"] is FlowResultType.FORM
@@ -227,8 +270,6 @@ async def test_options_add_device(serial_connection_mock: Mock, hass: HomeAssist
 
     await hass.async_block_till_done()
 
-    assert entry.data["automatic_add"]
-
     device_options = entry.data["devices"][OREGON_ID_STRING]
 
     assert not device_options["redirect_address"]
@@ -241,10 +282,10 @@ async def test_options_add_device(serial_connection_mock: Mock, hass: HomeAssist
 
 
 @pytest.mark.asyncio
-async def test_options_configure_device(
+async def test_options_configure_rf_device(
     serial_connection_mock: Mock, hass: HomeAssistant, device_registry: dr.DeviceRegistry
 ) -> None:
-    """Test we can add a device."""
+    """Test we can configure a device."""
 
     entry = MockConfigEntry(
         domain=DOMAIN,
@@ -253,8 +294,16 @@ async def test_options_configure_device(
     )
     result = await start_options_flow(hass, entry)
 
+    assert result["type"] is FlowResultType.MENU
+    assert result["step_id"] == "init"
+
+    result = await hass.config_entries.options.async_configure(
+        result["flow_id"],
+        user_input={"next_step_id": "configure_rf_device"},
+    )
+
     assert result["type"] is FlowResultType.FORM
-    assert result["step_id"] == "gateway_options"
+    assert result["step_id"] == "configure_rf_device"
 
     device_id = RfDeviceId(protocol="OREGON", address=OREGON_ADDRESS)
     device_entry = device_registry.async_get_device(identifiers=get_identifiers_from_device_id(device_id))
@@ -262,26 +311,12 @@ async def test_options_configure_device(
 
     result = await hass.config_entries.options.async_configure(
         result["flow_id"],
-        user_input={
-            "device": device_entry.id,
-        },
-    )
-
-    assert result["type"] is FlowResultType.FORM
-    assert result["step_id"] == "rf_device_options"
-
-    # ----------------------------------------------------------------------------------
-
-    result = await hass.config_entries.options.async_configure(
-        result["flow_id"],
-        user_input={"redirect_address": OREGON_REDIRECT_ADDRESS},
+        user_input={"device": device_entry.id, "redirect_address": OREGON_REDIRECT_ADDRESS},
     )
 
     assert result["type"] is FlowResultType.CREATE_ENTRY
 
     await hass.async_block_till_done()
-
-    assert entry.data["automatic_add"]
 
     assert entry.data["devices"][OREGON_ID_STRING]["redirect_address"] == OREGON_REDIRECT_ADDRESS
     assert entry.data["devices"][OREGON_ID_STRING]["profile_name"] == OREGON_DEVICE_INFO["profile_name"]
@@ -312,25 +347,18 @@ async def test_options_configure_device(
 
     result = await hass.config_entries.options.async_init(entry.entry_id)
 
-    assert result["type"] is FlowResultType.FORM
-    assert result["step_id"] == "gateway_options"
+    assert result["type"] is FlowResultType.MENU
+
+    result = await hass.config_entries.options.async_configure(
+        result["flow_id"],
+        user_input={"next_step_id": "configure_rf_device"},
+    )
 
     result = await hass.config_entries.options.async_configure(
         result["flow_id"],
         user_input={
-            "automatic_add": False,
             "device": device_entries[0].id,
         },
-    )
-
-    assert result["type"] is FlowResultType.FORM
-    assert result["step_id"] == "rf_device_options"
-
-    # ----------------------------------------------------------------------------------
-
-    result = await hass.config_entries.options.async_configure(
-        result["flow_id"],
-        user_input={},
     )
 
     assert result["type"] is FlowResultType.CREATE_ENTRY

@@ -35,18 +35,14 @@ class RfDeviceId:
 
     @property
     def group_code(self) -> str | None:
-        """Group code extracted from address for protocols supporting group commands.
-
-        Should combine house code with group if available.
-        """
+        """Group code extracted from address for protocols supporting group commands."""
 
         if self.protocol == "X2D":
-            return str(int(self.address) & 0x0000000F)
+            return str((int(self.address) & 0xFFFFFFF0) >> 4)
         if self.protocol == "CHACON":
-            return str(int(self.address) & 0x0000000F)
+            return str((int(self.address) & 0xFFFFFFC0) >> 6)
         if self.protocol in ("X10", "RTS"):
-            return str((int(self.address) & 0x000000F0) >> 4)
-        # TODO FS20 has local group, global group, house code.
+            return str((int(self.address) & 0xFFFFFFF0) >> 4)
         return None
 
     @property
@@ -54,12 +50,12 @@ class RfDeviceId:
         """Unit code extracted from address for protocols supporting group commands."""
 
         if self.protocol == "X2D":
-            return str((int(self.address) & 0xFFFFFFF0) >> 4)
+            return str(int(self.address) & 0x0000000F)
         if self.protocol == "CHACON":
-            return str((int(self.address) & 0xFFFFFFC0) >> 6)
+            return str(int(self.address) & 0x0000003F)
         if self.protocol in ("X10", "RTS"):
             return str(int(self.address) & 0x0000000F)
-        return None
+        return self.address
 
 
 @dataclass

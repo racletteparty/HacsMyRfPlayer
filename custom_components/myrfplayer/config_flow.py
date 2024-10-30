@@ -16,9 +16,9 @@ from homeassistant.const import CONF_ADDRESS, CONF_DEVICE, CONF_DEVICES, CONF_PR
 from homeassistant.core import callback
 from homeassistant.data_entry_flow import FlowResult
 from homeassistant.helpers import config_validation as cv, device_registry as dr
+from homeassistant.helpers.device_registry import DeviceEntry
 
 from .const import (
-    CONF_ADD_DEVICE,
     CONF_AUTOMATIC_ADD,
     CONF_DEVICE_SIMULATOR,
     CONF_INIT_COMMANDS,
@@ -43,6 +43,8 @@ class RfplayerConfigFlow(ConfigFlow):
 
     async def async_step_user(self, user_input: dict[str, Any] | None = None) -> ConfigFlowResult:
         """Config flow started from UI."""
+
+        # Only 1 RfPlayer gateway can be configured
         if self._async_current_entries():
             return self.async_abort(reason="single_instance_allowed")
 
@@ -101,15 +103,19 @@ class RfPlayerOptionsFlowHandler(OptionsFlow):
     def __init__(self, config_entry: ConfigEntry) -> None:
         """Initialize."""
         self.config_entry = config_entry
-        self.selected_device_id_string: str | None = None
-        self.selected_device_info: dict[str, Any] = {}
-        self.selected_device_profile: str | None = None
 
     async def async_step_init(self, user_input: dict[str, Any] | None = None) -> FlowResult:
         """Manage the options."""
-        return await self.async_step_gateway_options(user_input)
+        return self.async_show_menu(
+            step_id="init",
+            menu_options={
+                "configure_gateway": "RfPlayer gateway options",
+                "configure_rf_device": "RF device options",
+                "add_rf_device": "Add RF device",
+            },
+        )
 
-    async def async_step_gateway_options(self, user_input: dict[str, Any] | None = None) -> FlowResult:
+    async def async_step_configure_gateway(self, user_input: dict[str, Any] | None = None) -> FlowResult:
         """Prompt for gateway options."""
         schema_errors: dict[str, Any] = {}
 
@@ -123,29 +129,7 @@ class RfPlayerOptionsFlowHandler(OptionsFlow):
 
             self.update_config_data(global_options=global_options)
 
-            if CONF_DEVICE in user_input:
-                entry_id = user_input[CONF_DEVICE]
-                entry = self.device_registry.async_get(entry_id)
-                if entry:
-                    self.selected_device_id_string = get_device_id_string_from_identifiers(entry.identifiers)
-                    self.selected_device_info = self.config_entry.data[CONF_DEVICES][self.selected_device_id_string]
-                    return await self.async_step_rf_device_options()
-
-                schema_errors.update({CONF_DEVICE: "device_missing"})
-
-            if user_input.get(CONF_ADD_DEVICE, False):
-                return await self.async_step_add_rf_device()
-
             return self.async_create_entry(title="", data={})
-
-        device_registry = dr.async_get(self.hass)
-        device_entries = dr.async_entries_for_config_entry(device_registry, self.config_entry.entry_id)
-        self.device_registry = device_registry
-        self.device_entries = device_entries
-
-        configure_devices = {
-            entry.id: entry.name_by_user if entry.name_by_user else entry.name for entry in device_entries
-        }
 
         options = {
             vol.Required(
@@ -163,19 +147,19 @@ class RfPlayerOptionsFlowHandler(OptionsFlow):
             vol.Optional(
                 CONF_INIT_COMMANDS,
             ): str,
-            vol.Exclusive(CONF_ADD_DEVICE, group_of_exclusion=UPDATE_DEVICES_EXCLUSION): bool,
-            vol.Exclusive(CONF_DEVICE, group_of_exclusion=UPDATE_DEVICES_EXCLUSION): vol.In(configure_devices),
         }
 
-        return self.async_show_form(step_id="gateway_options", data_schema=vol.Schema(options), errors=schema_errors)
+        return self.async_show_form(step_id="configure_gateway", data_schema=vol.Schema(options), errors=schema_errors)
 
-    async def async_step_rf_device_options(self, user_input: dict[str, Any] | None = None) -> ConfigFlowResult:
+    async def async_step_configure_rf_device(self, user_input: dict[str, Any] | None = None) -> ConfigFlowResult:
         """Manage RF device options."""
 
         if user_input is not None:
-            # Existing device
-            assert self.selected_device_id_string
-            id_string = self.selected_device_id_string
+            entry_id = user_input[CONF_DEVICE]
+            entry = self.device_registry.async_get(entry_id)
+            assert entry
+
+            id_string = get_device_id_string_from_identifiers(entry.identifiers)
 
             devices: dict[str, dict[str, Any]] = {id_string: user_input}
             devices[id_string].setdefault(CONF_REDIRECT_ADDRESS, None)
@@ -185,11 +169,12 @@ class RfPlayerOptionsFlowHandler(OptionsFlow):
             return self.async_create_entry(title="", data={})
 
         option_schema = {
+            vol.Required(CONF_DEVICE): vol.In(self._list_rf_devices()),
             vol.Optional(CONF_REDIRECT_ADDRESS): str,
         }
 
         return self.async_show_form(
-            step_id="rf_device_options",
+            step_id="configure_rf_device",
             data_schema=vol.Schema(option_schema),
         )
 
@@ -249,6 +234,17 @@ class RfPlayerOptionsFlowHandler(OptionsFlow):
                     entry_data[CONF_REDIRECT_ADDRESS][redirect_id_string] = id_string
         self.hass.config_entries.async_update_entry(self.config_entry, data=entry_data)
         self.hass.async_create_task(self.hass.config_entries.async_reload(self.config_entry.entry_id))
+
+    def _list_rf_devices(self) -> dict[str, str]:
+        device_registry = dr.async_get(self.hass)
+        device_entries = dr.async_entries_for_config_entry(device_registry, self.config_entry.entry_id)
+        self.device_registry = device_registry
+        self.device_entries = device_entries
+
+        return {entry.id: self._get_device_name(entry) for entry in device_entries}
+
+    def _get_device_name(self, entry: DeviceEntry) -> str:
+        return entry.name_by_user if entry.name_by_user else entry.name or "undefined"
 
 
 def get_serial_by_id(dev_path: str) -> str:
