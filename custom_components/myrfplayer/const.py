@@ -18,6 +18,7 @@ ATTR_INFOS = "infos"
 CONNECTION_TIMEOUT = 10
 
 SERVICE_SEND_RAW_COMMAND = "send_raw_command"
+SERVICE_SEND_PAIRING_COMMAND = "send_pairing_command"
 SERVICE_SIMULATE_EVENT = "simulate_event"
 
 RFPLAYER_CLIENT = "rfplayer_client"

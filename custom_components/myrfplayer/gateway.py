@@ -2,7 +2,6 @@
 
 import asyncio
 import copy
-import json
 import logging
 from typing import cast
 
@@ -10,7 +9,7 @@ import voluptuous as vol
 
 from custom_components.myrfplayer.device_profiles import async_get_profile_registry
 from custom_components.myrfplayer.helpers import build_device_info_from_event, get_device_id_string_from_identifiers
-from custom_components.myrfplayer.rfplayerlib import RfPlayerClient, RfPlayerException
+from custom_components.myrfplayer.rfplayerlib import COMMAND_PROTOCOLS, RfPlayerClient, RfPlayerException
 from custom_components.myrfplayer.rfplayerlib.device import RfDeviceEvent
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import (
@@ -40,6 +39,7 @@ from .const import (
     CONNECTION_TIMEOUT,
     DOMAIN,
     RFPLAYER_CLIENT,
+    SERVICE_SEND_PAIRING_COMMAND,
     SERVICE_SEND_RAW_COMMAND,
     SERVICE_SIMULATE_EVENT,
     SIGNAL_RFPLAYER_AVAILABILITY,
@@ -49,6 +49,7 @@ from .const import (
 _LOGGER = logging.getLogger(__name__)
 
 SERVICE_SEND_RAW_COMMAND_SCHEMA = vol.Schema({ATTR_COMMAND: str})
+SERVICE_SEND_PAIRING_COMMAND_SCHEMA = vol.Schema({CONF_PROTOCOL: vol.In(COMMAND_PROTOCOLS), CONF_ADDRESS: str})
 SERVICE_SIMULATE_EVENT_SCHEMA = vol.Schema({ATTR_EVENT_DATA: dict})
 
 JAMMING_DEVICE_ID_STRING = "JAMMING_0"
@@ -101,6 +102,12 @@ class Gateway:
         )
         self.hass.services.async_register(
             DOMAIN,
+            SERVICE_SEND_PAIRING_COMMAND,
+            self._send_pairing_command,
+            schema=SERVICE_SEND_PAIRING_COMMAND_SCHEMA,
+        )
+        self.hass.services.async_register(
+            DOMAIN,
             SERVICE_SIMULATE_EVENT,
             self._simulate_event,
             schema=SERVICE_SIMULATE_EVENT_SCHEMA,
@@ -117,7 +124,7 @@ class Gateway:
     def _async_handle_receive(self, event: RfDeviceEvent) -> None:
         """Event handler connected to the client."""
 
-        _LOGGER.debug("Received event: %s", json.dumps(event.data))
+        _LOGGER.debug("Received event from %s", event.device.id_string)
 
         if event.id_string not in self.device_ids and self.config[CONF_AUTOMATIC_ADD]:
             self._add_rf_device(event)
@@ -218,6 +225,15 @@ class Gateway:
 
         command = call.data[ATTR_COMMAND]
         client.send_raw_command(command)
+
+    def _send_pairing_command(self, call: ServiceCall) -> None:
+        client = self._get_client()
+        if not client.connected:
+            raise PlatformNotReady("RfPlayer not connected")
+
+        protocol = call.data[CONF_PROTOCOL]
+        address = call.data[CONF_ADDRESS]
+        client.send_raw_command(f"ASSOC {protocol} ID {address}")
 
     async def _simulate_event(self, call: ServiceCall) -> None:
         client = self._get_client()

@@ -33,15 +33,30 @@ Services:
 
 ## Configuration
 
-Configuration is done in the UI.
+This integration supports configuration flow to
 
-It is possible to emulate a RfPlayer to try the integration without real hardware. You can use the simulate event service to try out different JSON events as if they were received on the USB serial line. Read the RfPlayer API documentation for details about the JSON payload format.
+- select the RfPlayer USB device
+- configure RfPlayer options (receiver modes, init script...)
+- configure RF device options
+- add RF devices manually
 
-Some RF devices like Oregon sensors will renew their addresses after changing the battery. Using the redirect device option, it is possible to redirect events from the new address to device and entities created with the initial address.
+### Manual RF device configuration
 
-RF devices can be declared manually from the integration configuration form.
+By default, RF device are added automatically to HomeAssitant upon receipt of RfPlayer packet matching a known device that has not been already configured. The RF device will be created with the first matching RF device profiles. The automatic creation option can be disabled afterward if you don't want to add new devices anymore.
 
-When automatic device creation is enabled, the RF device will be created with the first matching RF device profiles. However, some generic RF devices can match several profiles (e.g. Blyss devices). If you want to assign a more specific profile, you need to disable automatic device creation, delete the device that was automatically created and re-create it manually with the selected profile.
+Automatic device creation is mostly useful for sensors because most actuators are only receivers and cannot send events. In that case, the RF device must be declared manually from the RfPlayer configuration menu.
+
+Some generic RF devices can match several device profiles (e.g. Blyss devices). If you want to assign a more specific profile, you need to disable automatic device creation, delete the device that was automatically created and re-create it manually with the profile of your choice.
+
+### Device replacement
+
+Some RF devices like Oregon sensors will renew their addresses after changing the battery. This integration provides a RF device option named _redirect address_ to redirect events with a new address to the device entities created with the initial address. This is useful to keep the current user configuration of the device (area, labels...) while still being able to receive events with the new device address.
+
+### Simulation
+
+It is possible to emulate a RfPlayer to try the integration without real hardware. When the RfPlayer integration is added, simply select the simulator device instead of a real USB device.
+
+You can use the simulate event service to try out different JSON events as if they were received on the USB serial line. Read the RfPlayer API documentation for details about the JSON payload format.
 
 ## Device profiles
 
@@ -51,8 +66,8 @@ Platform attributes are extracted from the JSON payload using [JSON path](https:
 
 List of device profiles verification with real devices:
 
-| Profile                                     | Event verified | Command verified | Comment |
-| ------------------------------------------- | -------------- | ---------------- | ------- |
+| Profile                                     | Event verified | Command verified | Comment                    |
+| ------------------------------------------- | -------------- | ---------------- | -------------------------- |
 | X10 DOMIA Switch                            | ❌             | ❌               |
 | Jamming Detector                            | ❌             | ❌               |
 | X10 CHACON KD101 BLYSS FS20 Switch          | ❌             | ❌               |
@@ -75,7 +90,7 @@ List of device profiles verification with real devices:
 | X2D Thermostat Gas                          | ❌             | ❌               |
 | X2D Detector/Sensor                         | ❌             | ❌               |
 | X2D Shutter                                 | ❌             | ❌               |
-| Edision Temperature Sensor                  | ✅             |                  | No humidity sensor support
+| Edision Temperature Sensor                  | ✅             |                  | No humidity sensor support |
 
 ## Future improvements
 

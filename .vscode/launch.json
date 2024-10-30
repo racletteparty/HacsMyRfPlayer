@@ -12,6 +12,22 @@
       "purpose": ["debug-test"],
       "console": "integratedTerminal",
       "justMyCode": false
+    },
+    {
+      "name": "Hass",
+      "type": "debugpy",
+      "request": "launch",
+      "program": "${workspaceFolder}/venv/bin/hass",
+      "args": ["--config", "${workspaceFolder}/config", "--debug"],
+      "console": "integratedTerminal",
+      "justMyCode": false
+    },
+    {
+      "name": "Python: Attach process",
+      "type": "debugpy",
+      "request": "attach",
+      "processId": "${command:pickProcess}",
+      "justMyCode": false
     }
   ]
 }

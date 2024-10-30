@@ -36,22 +36,51 @@ RECEIVER_MODES = [
     "JAMMING",
     "EDISIO",
 ]
+"""List of receiver modes."""
 
 DEVICE_PROTOCOLS = [
-    "X10",
-    "RTS",
-    "VISONIC",
     "BLYSS",
     "CHACON",
-    "OREGON",
     "DOMIA",
+    "EDISIO",
+    "FS20",
+    "KD101",
+    "OREGON",
+    "PARROT",
+    "RTS",
+    "TIC",
+    "VISONIC",
+    "VISONIC433",
+    "VISONIC868",
+    "X10",
     "X2D",
+    "X2D433",
+    "X2D868",
+    "X2DELEC",
+    "X2DGAS",
+    "X2DSHUTTER",
+]
+"""List of protocol names that could appear either in an incoming JSON packet or as a outgoing command parameter."""
+
+COMMAND_PROTOCOLS = [
+    "BLYSS",
+    "CHACON",
+    "DOMIA",
+    "EDISIO",
+    "FS20",
     "KD101",
     "PARROT",
-    "TIC",
-    "FS20",
-    "EDISIO",
+    "RTS",
+    "VISONIC433",
+    "VISONIC868",
+    "X10",
+    "X2D433",
+    "X2D868",
+    "X2DELEC",
+    "X2DGAS",
+    "X2DSHUTTER",
 ]
+"""List of protocol names allowed for outgoing commands."""
 
 
 class RfPlayerException(Exception):
