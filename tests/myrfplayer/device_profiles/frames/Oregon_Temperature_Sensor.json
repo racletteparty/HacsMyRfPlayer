@@ -24,8 +24,8 @@
             "qualifier": "48",
             "lowBatt": "1",
             "measures": [
-              { "type": "temperature", "value": "25.3", "unit": "°" },
-              { "type": "humidity", "value": "0", "unit": "%" }
+              { "type": "temperature", "value": "25.3", "unit": "Celsius" },
+              { "type": "hygrometry", "value": "0", "unit": "%" }
             ]
           }
         }
@@ -40,7 +40,7 @@
       "sensor": {
         "Temperature": {
           "value": "25.3",
-          "unit": "°"
+          "unit": "°C"
         },
         "Rf Level": {
           "value": "-71",

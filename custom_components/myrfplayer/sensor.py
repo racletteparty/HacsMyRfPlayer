@@ -1,9 +1,6 @@
 """Support for RfPlayer sensors."""
 
-from datetime import date, datetime
-from decimal import Decimal
 import logging
-import math
 from typing import cast
 
 from custom_components.myrfplayer.device_profiles import AnyRfpPlatformConfig, RfpPlatformConfig, RfpSensorConfig
@@ -16,7 +13,6 @@ from homeassistant.const import Platform
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity import Entity
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
-from homeassistant.helpers.typing import StateType
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -89,17 +85,19 @@ class MyRfPlayerSensor(RfDeviceEntity, SensorEntity):
         self._config = cast(RfpSensorConfig, platform_config)
         self._event_data = event_data
 
-    @property
-    def native_value(self) -> StateType | date | datetime | Decimal:
-        """Return the state of the sensor."""
-        if not self._event_data:
-            return None
-        str_value = self._config.state.get_value(self._event_data)
-        return float(str_value) if str_value else math.nan
-
     def _apply_event(self, event_data: RfPlayerEventData) -> bool:
         """Apply command from RfPlayer."""
         super()._apply_event(event_data)
 
-        _LOGGER.debug("Sensor update %s", self._device_id.id_string)
+        str_value = self._config.state.get_value(event_data)
+        if not str_value:
+            _LOGGER.info("Missing sensor value")
+            return False
+
+        try:
+            self._attr_native_value = float(str_value)
+        except ValueError:
+            _LOGGER.info("Ignoring non numeric value %s", str_value)
+            return False
+
         return True

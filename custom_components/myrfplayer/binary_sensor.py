@@ -98,7 +98,6 @@ class MyRfPlayerBinarySensor(RfDeviceEntity, BinarySensorEntity):
             _LOGGER.info("Unsupported binary sensor command %s", command)
             return False
 
-        _LOGGER.debug("Binary sensor update %s ", self._device_id.id_string)
         return True
 
     def _group_event(self, event: RfDeviceEvent) -> bool:

@@ -134,6 +134,4 @@ class MyRfPlayerCover(RfDeviceEntity, CoverEntity):
             _LOGGER.warning("Unsupported cover state %s", state)
             return False
 
-        _LOGGER.debug("Cover update %s", self._device_id.id_string)
-
         return True
