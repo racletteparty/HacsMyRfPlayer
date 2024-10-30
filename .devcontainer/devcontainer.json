@@ -1,11 +1,12 @@
 {
   "name": "Hacs integration",
-  "image": "mcr.microsoft.com/devcontainers/python:1-3.12",
+  "context": "..",
+  "dockerFile": "Dockerfile",
   "privileged": true,
   "postCreateCommand": "scripts/setup",
   "containerEnv": {
     "PYTHONASYNCIODEBUG": "1",
-    "UV_PROJECT_ENVIRONMENT": "venv",
+    "UV_PROJECT_ENVIRONMENT": "/home/vscode/.local/ha-venv",
     "UV_CACHE_DIR": "/workspaces/HacsMyRfPlayer/.cache/uv"
   },
   "features": {
@@ -31,12 +32,13 @@
       // Please keep this file in sync with settings in home-assistant/.vscode/settings.default.json
       "settings": {
         "python.experiments.optOutFrom": ["pythonTestAdapter"],
-        "python.defaultInterpreterPath": "/workspaces/HacsMyRfPlayer/venv/bin/python",
-        "python.pythonPath": "/workspaces/HacsMyRfPlayer/venv/bin/python",
+        "python.defaultInterpreterPath": "/home/vscode/.local/ha-venv/bin/python",
+        "python.pythonPath": "/home/vscode/.local/ha-venv/bin/python",
         "python.terminal.activateEnvInCurrentTerminal": true,
         "python.testing.pytestArgs": ["--no-cov"],
         "editor.formatOnPaste": false,
         "editor.formatOnSave": true,
+        "editor.formatOnType": true,
         "files.trimTrailingWhitespace": true,
         "terminal.integrated.profiles.linux": {
           "zsh": {

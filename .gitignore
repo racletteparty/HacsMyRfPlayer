@@ -8,6 +8,9 @@ reports
 .ruff_cache
 .mypy_cache
 
+# local config
+certs/
+
 
 # misc
 .coverage
