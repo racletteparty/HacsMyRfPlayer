@@ -104,7 +104,7 @@ async def test_automatic_add(serial_connection_mock: Mock, hass: HomeAssistant, 
 
     # Force profile cause there is no first match for lighting devices for now
     mocker.patch.object(
-        _get_profile_registry(), "get_profile_name_from_event", return_value="X10|CHACON|KD101|BLYSS|FS20 Lighting"
+        _get_profile_registry(True), "get_profile_name_from_event", return_value="X10|CHACON|KD101|BLYSS|FS20 Lighting"
     )
 
     client = cast(RfPlayerClient, hass.data[DOMAIN][RFPLAYER_CLIENT])

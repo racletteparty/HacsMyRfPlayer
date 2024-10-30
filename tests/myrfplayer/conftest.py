@@ -6,7 +6,6 @@ import asyncio
 from collections.abc import Callable
 from typing import cast
 from unittest.mock import Mock
-from uuid import uuid4
 
 import pytest
 from pytest_homeassistant_custom_component.common import MockConfigEntry
@@ -18,6 +17,7 @@ from custom_components.myrfplayer.const import (
     CONF_RECEIVER_PROTOCOLS,
     CONF_RECONNECT_INTERVAL,
     CONF_REDIRECT_ADDRESS,
+    CONF_VERBOSE_MODE,
 )
 from custom_components.myrfplayer.rfplayerlib import RfPlayerClient, RfplayerProtocol
 from custom_components.myrfplayer.rfplayerlib.device import RfDeviceEvent
@@ -41,11 +41,11 @@ def test_protocol() -> RfplayerProtocol:
     disconnect_callback = Mock(spec=callable)
     loop = Mock()
     protocol = RfplayerProtocol(
-        id=str(uuid4()),
         event_callback=event_callback,
         disconnect_callback=disconnect_callback,
         loop=loop,
         init_script=["LEDACTIVITY 0", "JAMMING 10"],
+        verbose=True,
     )
     protocol.transport = transport
     return protocol
@@ -88,6 +88,7 @@ def create_rfplayer_test_cfg(
         CONF_AUTOMATIC_ADD: automatic_add,
         CONF_RECEIVER_PROTOCOLS: protocols,
         CONF_INIT_COMMANDS: None,
+        CONF_VERBOSE_MODE: True,
         CONF_RECONNECT_INTERVAL: 10,
         CONF_DEVICES: devices or {},
         CONF_REDIRECT_ADDRESS: {},

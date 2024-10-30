@@ -36,14 +36,10 @@ def _builder(
     device: RfDeviceId,
     platform_configs: list[AnyRfpPlatformConfig],
     event_data: RfPlayerEventData | None,
+    verbose: bool,
 ) -> list[Entity]:
     return [
-        MyRfPlayerBinarySensor(
-            device,
-            _get_entity_description(config),
-            config,
-            event_data=event_data,
-        )
+        MyRfPlayerBinarySensor(device, _get_entity_description(config), config, event_data=event_data, verbose=verbose)
         for config in platform_configs
     ]
 
@@ -76,9 +72,10 @@ class MyRfPlayerBinarySensor(RfDeviceEntity, BinarySensorEntity):
         entity_description: BinarySensorEntityDescription,
         platform_config: RfpPlatformConfig,
         event_data: RfPlayerEventData | None,
+        verbose: bool,
     ) -> None:
         """Initialize the RfPlayer sensor."""
-        super().__init__(device, platform_config.name)
+        super().__init__(device_id=device, name=platform_config.name, event_data=event_data, verbose=verbose)
         self.entity_description = entity_description
         assert isinstance(platform_config, RfpSensorConfig)
         self._config = cast(RfpSensorConfig, platform_config)

@@ -81,12 +81,6 @@ class RfDeviceEvent:
     device: RfDeviceId
     data: RfPlayerEventData
 
-    @property
-    def id_string(self):
-        """Get device id."""
-
-        return self.device.id_string
-
 
 @dataclass
 class RfDeviceEventAdapter:

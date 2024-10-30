@@ -26,16 +26,11 @@ def _get_entity_description(
 
 
 def _builder(
-    device: RfDeviceId,
-    platform_config: list[AnyRfpPlatformConfig],
-    event_data: RfPlayerEventData | None,
+    device: RfDeviceId, platform_config: list[AnyRfpPlatformConfig], event_data: RfPlayerEventData | None, verbose: bool
 ) -> list[Entity]:
     return [
         MyRfPlayerLight(
-            device,
-            _get_entity_description(config, event_data),
-            config,
-            event_data=event_data,
+            device, _get_entity_description(config, event_data), config, event_data=event_data, verbose=verbose
         )
         for config in platform_config
     ]
@@ -71,9 +66,10 @@ class MyRfPlayerLight(RfDeviceEntity, LightEntity):
         entity_description: LightEntityDescription,
         platform_config: RfpPlatformConfig,
         event_data: RfPlayerEventData | None,
+        verbose: bool,
     ) -> None:
         """Initialize the RfPlayer light."""
-        super().__init__(device, platform_config.name)
+        super().__init__(device_id=device, name=platform_config.name, event_data=event_data, verbose=verbose)
         self.entity_description = entity_description
         assert isinstance(platform_config, RfpLightConfig)
         self._config = cast(RfpLightConfig, platform_config)
@@ -95,12 +91,12 @@ class MyRfPlayerLight(RfDeviceEntity, LightEntity):
         brightness = kwargs.get(ATTR_BRIGHTNESS)
         self._attr_is_on = True
         if brightness is None or not self._config.cmd_set_level:
-            _LOGGER.info("turn on %s", self.entity_id)
+            _LOGGER.debug("turn on %s", self.entity_id)
             await self._send_command(self._config.make_cmd_turn_on(**self._command_parameters()))
             self._attr_brightness = 255
         else:
             brightness_pct = brightness * 100 // 255
-            _LOGGER.info("turn on %s with brightness %f", self.entity_id, brightness_pct)
+            _LOGGER.debug("turn on %s with brightness %f", self.entity_id, brightness_pct)
             await self._send_command(
                 self._config.make_cmd_set_level(**self._command_parameters(brightness=brightness_pct))
             )
@@ -110,7 +106,7 @@ class MyRfPlayerLight(RfDeviceEntity, LightEntity):
 
     async def async_turn_off(self, **kwargs: Any) -> None:
         """Turn the device off."""
-        _LOGGER.info("turn off %s", self.entity_id)
+        _LOGGER.debug("turn off %s", self.entity_id)
         await self._send_command(self._config.make_cmd_turn_off(**self._command_parameters()))
         self._attr_is_on = False
         self._attr_brightness = 0

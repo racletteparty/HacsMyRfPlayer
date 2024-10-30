@@ -30,15 +30,14 @@ class RfplayerProtocol(asyncio.Protocol):
 
     def __init__(
         self,
-        id: str,
         loop: asyncio.AbstractEventLoop,
         event_callback: Callable[[RfPlayerEventData], None],
         disconnect_callback: Callable[[Exception | None], None],
-        init_script: list[str] | None = None,
+        init_script: list[str] | None,
+        verbose: bool,
     ) -> None:
         """Initialize class."""
 
-        self.id = id
         self.loop = loop
         self.transport: asyncio.WriteTransport | None = None
         self.event_callback = event_callback
@@ -46,6 +45,7 @@ class RfplayerProtocol(asyncio.Protocol):
         complete_init_script = list(MINIMUM_SCRIPT)
         complete_init_script.extend(init_script or [])
         self.init_script = complete_init_script
+        self.verbose = verbose
         self.buffer = ""
         self.request_lock = asyncio.Lock()
         self.response_event = asyncio.Event()
@@ -65,6 +65,8 @@ class RfplayerProtocol(asyncio.Protocol):
             invalid_data = data.decode(errors="replace")
             _LOGGER.warning("Failed to decode received data: %s", invalid_data)
         else:
+            if self.verbose:
+                _LOGGER.debug("data received: %s", decoded_data)
             self.buffer += decoded_data
             self.handle_lines()
 
@@ -74,7 +76,7 @@ class RfplayerProtocol(asyncio.Protocol):
             line, self.buffer = self.buffer.split("\n", 1)
             line = line.strip("\0 \t\r")
             if _valid_packet(line):
-                _LOGGER.debug("received packet: %s", line)
+                _LOGGER.debug("packet received: %s", line)
                 self.handle_raw_packet(line)
             else:
                 _LOGGER.warning("dropping invalid data: %s", line)
@@ -116,9 +118,5 @@ class RfplayerProtocol(asyncio.Protocol):
                 return self.response_packet[:]
 
     def connection_lost(self, exc: Exception | None) -> None:
-        """Log when connection is closed, if needed call callback."""
-        if exc:
-            _LOGGER.warning("connection lost due to error %s", exc)
-        else:
-            _LOGGER.info("connection explicitly closed")
+        """Forward to disconnect callback."""
         self.disconnect_callback(exc)
